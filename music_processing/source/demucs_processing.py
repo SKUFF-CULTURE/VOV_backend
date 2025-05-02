@@ -40,7 +40,7 @@ class DemucsProcessor:
         output_path.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"[Demucs] Processing file: {input_path}")
-        args = shlex.split(f'--two-stems vocals -n {model} "{input_path}"')
+        args = shlex.split(f'--two-stems vocals -n {model} --device cuda "{input_path}"')
 
         try:
             demucs.separate.main(args)
