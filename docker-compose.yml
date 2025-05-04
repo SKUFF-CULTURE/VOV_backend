@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: segmentum
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+
+  server:
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgres://postgres:123@db:5432/VOV
+      SESSION_SECRET: 6cb8f666d18b1edc37f1d2404fdd72a183207b5f94c3ca37d41a2c9942c1e6fc
+      JWT_SECRET: 960b1df1c2cb1b7099c7c7d4578072c46ad8e73af8f72e8ce6e18bfef469e91d
+      GOOGLE_CLIENT_ID: 431201460568-0hscteefotosjs35l69158pijmk0sufr.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_CALLBACK_URL: http://localhost:5000/auth/google/callback
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+    command: npm run dev
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+volumes:
+  db-data:
