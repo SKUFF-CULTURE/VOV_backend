@@ -1,4 +1,4 @@
-require('dotenv/lib/main').config();
+require('dotenv').config();
 
 module.exports = {
   port: process.env.PORT || 5000,

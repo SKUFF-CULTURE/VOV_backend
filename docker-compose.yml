@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123
-      POSTGRES_DB: segmentum
+      POSTGRES_DB: VOV
     ports:
       - "5434:5432"
     volumes:
