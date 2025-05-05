@@ -1,6 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const passport = require('./config/passport.js'); 
+require('./config/passport-yandex');
 const cors = require('cors')
 const app = express();
 require('dotenv').config();
@@ -32,7 +33,8 @@ app.use(passport.session());
 const authRoutes = require('./routes/authRoutes');
 
 // Подключение маршрутов
-app.use('/auth', authRoutes);                 //auth (+)                        
+app.use('/auth', authRoutes);                 //auth (+)  
+                      
 // Базовый роут
 app.get('/', (req, res) => {
   res.send('VOV Backend is running');
