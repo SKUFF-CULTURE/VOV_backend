@@ -1,3 +1,4 @@
+// routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
@@ -31,7 +32,10 @@ router.get(
 // Yandex OAuth
 router.get(
   '/yandex',
-  passport.authenticate('yandex', { scope: ['login:email'] })
+  passport.authenticate('yandex', {
+    // login:info — для имени/фамилии/username; login:email — для email
+    scope: ['login:info', 'login:email']
+  })
 );
 
 router.get(
@@ -53,11 +57,11 @@ router.get(
 
 // Ошибка аутентификации
 router.get('/failure', (req, res) => {
-  res.status(401).json({ message: "Authentication Failed" });
+  res.status(401).json({ message: 'Authentication Failed' });
 });
 
 // Защищённые маршруты
 router.get('/profile', jwtAuth, authController.profile);
-router.get('/logout', authController.logout);
+router.get('/logout',  authController.logout);
 
 module.exports = router;

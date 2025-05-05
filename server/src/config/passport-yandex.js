@@ -1,3 +1,4 @@
+// src/config/passport-yandex.js
 const passport = require('passport');
 const { Strategy: YandexStrategy } = require('passport-yandex');
 const db = require('./db');
@@ -7,12 +8,17 @@ passport.use(new YandexStrategy({
   clientSecret: process.env.YANDEX_CLIENT_SECRET,
   callbackURL:  process.env.YANDEX_CALLBACK_URL || 'http://localhost:5000/auth/yandex/callback'
 }, async (accessToken, refreshToken, profile, done) => {
-  const yandexId = profile.id;
-  // Яндекс выдаёт email, если попросить scope 'login:email'
-  const email = profile.emails?.[0]?.value;
-
   try {
-    // Ищем пользователя по yandex_id или email
+    const yandexId = profile.id;
+    const email    = profile.emails?.[0]?.value || null;
+
+    // Формируем имя: приоритет — displayName, потом first_name+last_name, потом username
+    const name = profile.displayName
+      || `${(profile._json.first_name || '').trim()} ${(profile._json.last_name || '').trim()}`.trim()
+      || profile.username
+      || null;
+
+    // Ищем по внешнему ID (yandexId) или email
     const { rows } = await db.query(
       'SELECT * FROM users WHERE google_id = $1 OR email = $2',
       [yandexId, email]
@@ -21,25 +27,34 @@ passport.use(new YandexStrategy({
     let user;
     if (rows.length) {
       user = rows[0];
-      // Если раньше входили по email, обновляем yandex_id
+
+      // Если пользователь ранее заходил только по email — сохраняем yandexId
       if (!user.google_id) {
         await db.query(
           'UPDATE users SET google_id = $1 WHERE id = $2',
           [yandexId, user.id]
         );
       }
+
+      // Если имя изменилось — обновляем
+      if (user.name !== name) {
+        await db.query(
+          'UPDATE users SET name = $1 WHERE id = $2',
+          [name, user.id]
+        );
+      }
     } else {
-      // Создаём нового пользователя
-      const res = await db.query(
+      // Новый пользователь — вставляем сразу имя, email и yandexId
+      const insertRes = await db.query(
         'INSERT INTO users (name, email, google_id) VALUES ($1, $2, $3) RETURNING *',
-        [profile.displayName, email, yandexId]
+        [name, email, yandexId]
       );
-      user = res.rows[0];
+      user = insertRes.rows[0];
     }
 
-    done(null, user);
+    return done(null, user);
   } catch (err) {
-    done(err, null);
+    return done(err, null);
   }
 }));
 
@@ -49,7 +64,10 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const { rows } = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    const { rows } = await db.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
     done(null, rows[0] || false);
   } catch (err) {
     done(err, null);
