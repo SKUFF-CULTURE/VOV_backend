@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 
-class AudioRestorer:
+class AudioSRRestorer:
     @staticmethod
     def _split_audio(audio_path, chunk_size=5000):
         audio_path = Path(audio_path).resolve()
@@ -115,7 +115,7 @@ class AudioRestorer:
 
 
 if __name__ == "__main__":
-    restorer = AudioRestorer()
+    restorer = AudioSRRestorer()
     result = restorer.restore(
         input_wav="audio/denoised/tiomnaia_noch_vocals_denoised.wav",
         output_path="audio/restored/tmp/cleaned_output.wav"

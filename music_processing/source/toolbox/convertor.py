@@ -65,5 +65,5 @@ class AudioConverter:
 
 if __name__ == "__main__":
     converter = AudioConverter()
-    converter.to_wav(input_path="audio/raw/Тёмная ночь.mp3")
+    converter.to_wav(input_path="../audio/raw/Тёмная ночь.mp3")
     converter.convert_name("audio/raw/Тёмная ночь.wav")
