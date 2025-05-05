@@ -32,15 +32,15 @@ class DemucsProcessor:
             except RuntimeError:
                 logger.warning("[Audio] 'sox_io' backend unavailable. Falling back to default.")
 
-
-
-    def separate_vocals(self, input_path, output_path, model="htdemucs") -> dict:
+    def separate_vocals(self, input_path, output_path, model="htdemucs", device="cuda", gpu_index: int = 0) -> dict:
         input_path = Path(input_path).resolve()
         output_path = Path(output_path).resolve()
         output_path.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"[Demucs] Processing file: {input_path}")
-        args = shlex.split(f'--two-stems vocals -n {model} --device cuda "{input_path}"')
+        device_str = f"cuda:{gpu_index}" if device == "cuda" else "cpu"
+        logger.info(f"[Demucs] Processing file: {input_path} on device: {device_str}")
+
+        args = shlex.split(f'--two-stems vocals -n {model} --device {device_str} "{input_path}"')
 
         try:
             demucs.separate.main(args)
@@ -58,7 +58,6 @@ class DemucsProcessor:
             logger.error("Expected output files not found.")
             raise FileNotFoundError("Demucs output files missing.")
 
-        # Копируем в output/
         final_vocals = output_path / f"{stem_name}_vocals.wav"
         final_instr = output_path / f"{stem_name}_instrumental.wav"
 

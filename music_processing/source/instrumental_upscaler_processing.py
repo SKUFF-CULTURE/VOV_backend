@@ -1,9 +1,12 @@
+# AudioSR
+
 import subprocess
 import logging
 from pathlib import Path
 import sys
 from pydub import AudioSegment
 import time
+import os
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
@@ -61,16 +64,20 @@ class AudioRestorer:
         logger.info(f"[Collect] Combined file saved to: {output_path}")
         return str(output_path)
 
-    def upscale(self, input_wav: str, save_dir: str, model_name="basic", device="cuda"):
+    def upscale(self, input_wav: str, save_dir: str, model_name="basic", device="cuda:0"):
         input_path = Path(input_wav).resolve()
         save_dir = Path(save_dir).resolve()
         save_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"[AudioRestorer] Upscaling: {input_path} → {save_dir}")
 
-        # Разбиваем на чанки
         chunks = self._split_audio(input_path)
         file_list = self._create_file_list(chunks)
+
+        if device.startswith("cuda:"):
+            device_id = device.split(":")[1]
+            os.environ["CUDA_VISIBLE_DEVICES"] = device_id
+            logger.info(f"[AudioRestorer] Using GPU: {device}")
 
         command = [
             sys.executable, "-m", "audiosr",
