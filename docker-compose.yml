@@ -25,6 +25,9 @@ services:
       GOOGLE_CLIENT_ID: 467118991284-0sbe56t1mb6gmj078b1p88u6r0o6ejha.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: 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
       GOOGLE_CALLBACK_URL: http://localhost:5000/auth/google/callback
+      YANDEX_CLIENT_ID: 2eb4777db5ca49318c8c0dfbbe4a4f18
+      YANDEX_CLIENT_SECRET: 50aba346bc6740ea84549499e602b40c
+      YANDEX_CALLBACK_URL: http://localhost:5000/auth/yandex/callback
     ports:
       - "5000:5000"
     volumes:
