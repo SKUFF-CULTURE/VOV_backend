@@ -1,14 +1,12 @@
-# Convertor for audio file formats
-from pydub import AudioSegment
-from unidecode import unidecode
+import ffmpeg
 from pathlib import Path
-import logging
 import shutil
+import logging
 import re
+from unidecode import unidecode
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-
 
 class AudioConverter:
     def to_wav(self, input_path: str, output_path: str = None) -> Path:
@@ -34,8 +32,12 @@ class AudioConverter:
         logger.info(f"[Converter] Converting {input_path.name} → {output_path.name}")
 
         try:
-            audio = AudioSegment.from_file(input_path)
-            audio.export(output_path, format=target_format)
+            if target_format == "wav":
+                # Используем ffmpeg для конвертации в 32-битный WAV
+                ffmpeg.input(str(input_path)).output(str(output_path), acodec='pcm_f32le', map_metadata=0, y=None).run()
+            else:
+                # Для других форматов (например, mp3, flac)
+                ffmpeg.input(str(input_path)).output(str(output_path), map_metadata=0, y=None).run()
         except Exception as e:
             logger.exception(f"[Converter] Failed to convert {input_path.name} to {target_format}")
             raise e
@@ -56,14 +58,14 @@ class AudioConverter:
 
         if safe_path != original_path:
             shutil.copy(original_path, safe_path)
-            logger.info(f"[Demucs] Copied file to safe name: {safe_path}")
+            logger.info(f"[Converter] Copied file to safe name: {safe_path}")
         else:
-            logger.info(f"[Demucs] Input name already safe: {safe_path.name}")
+            logger.info(f"[Converter] Input name already safe: {safe_path.name}")
 
         return safe_path
 
 
 if __name__ == "__main__":
     converter = AudioConverter()
-    converter.to_wav(input_path="../audio/raw/Тёмная ночь.mp3")
-    converter.convert_name("audio/raw/Тёмная ночь.wav")
+    s_path = converter.convert_name("audio/raw/Тёмная ночь.mp3")
+    converter.to_wav(input_path=s_path)
