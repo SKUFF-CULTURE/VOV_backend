@@ -31,9 +31,11 @@ app.use(passport.session());
 
 // Импорт маршрутов
 const authRoutes = require('./routes/authRoutes');
+const songsRoutes = require('./routes/songs');
 
 // Подключение маршрутов
 app.use('/auth', authRoutes);                 //auth (+)  
+app.use('/api', songsRoutes);
                       
 // Базовый роут
 app.get('/', (req, res) => {
