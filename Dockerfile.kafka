@@ -1,0 +1,17 @@
+FROM bitnami/kafka:3.1.0-debian-10-r106
+
+USER root
+
+RUN apt-get update && apt-get install -y netcat && rm -rf /var/lib/apt/lists/*
+
+# Копируем скрипт внутрь контейнера
+COPY kafka_init.sh /kafka_init.sh
+
+# Делаем скрипт исполняемым
+RUN chmod +x /kafka_init.sh
+
+# Исправляем проблему с CRLF, делаем скрипт исполняемым
+RUN sed -i 's/\r$//' /kafka_init.sh && chmod +x /kafka_init.sh
+
+# Запускаем Kafka
+CMD ["/bin/bash", "-c", "/opt/bitnami/scripts/kafka/run.sh & sleep 10 && /kafka_init.sh && wait"]
