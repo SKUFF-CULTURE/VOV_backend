@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: vov
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+
+  server:
+    build: ./server
+    depends_on:
+      - db
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgres://postgres:123@db:5432/vov
+      SESSION_SECRET: 6cb8f666d18b1edc37f1d2404fdd72a183207b5f94c3ca37d41a2c9942c1e6fc
+      JWT_SECRET: 960b1df1c2cb1b7099c7c7d4578072c46ad8e73af8f72e8ce6e18bfef469e91d
+      GOOGLE_CLIENT_ID: 467118991284-0sbe56t1mb6gmj078b1p88u6r0o6ejha.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_CALLBACK_URL: http://localhost:5000/auth/google/callback
+      YANDEX_CLIENT_ID: 2eb4777db5ca49318c8c0dfbbe4a4f18
+      YANDEX_CLIENT_SECRET: 10184717e4964d70bcb8f3494fd46edc
+      YANDEX_CALLBACK_URL: http://localhost:5000/auth/yandex/callback
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+    command: npm run dev
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+volumes:
+  db-data:
