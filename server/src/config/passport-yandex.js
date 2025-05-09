@@ -1,4 +1,3 @@
-// src/config/passport-yandex.js
 const passport = require('passport');
 const { Strategy: YandexStrategy } = require('passport-yandex');
 const db = require('./db');
@@ -12,15 +11,22 @@ passport.use(new YandexStrategy({
     const yandexId = profile.id;
     const email    = profile.emails?.[0]?.value || null;
 
-    // Формируем имя: приоритет — displayName, потом first_name+last_name, потом username
-    const name = profile.displayName
-      || `${(profile._json.first_name || '').trim()} ${(profile._json.last_name || '').trim()}`.trim()
-      || profile.username
-      || null;
+    // Собираем имя, если есть first_name/last_name или username
+    const json      = profile._json || {};
+    const display   = profile.displayName;
+    const nameParts = [
+      json.first_name && json.first_name.trim(),
+      json.last_name  && json.last_name.trim()
+    ].filter(Boolean);
+    const name = display || nameParts.join(' ') || profile.username || null;
 
-    // Ищем по внешнему ID (yandexId) или email
+    // URL аватарки через default_avatar_id
+    const avatar = json.default_avatar_id
+      ? `https://avatars.yandex.net/get-yapic/${json.default_avatar_id}/islands-200`
+      : null;
+
     const { rows } = await db.query(
-      'SELECT * FROM users WHERE google_id = $1 OR email = $2',
+      'SELECT * FROM public.users WHERE google_id = $1 OR email = $2',
       [yandexId, email]
     );
 
@@ -28,33 +34,39 @@ passport.use(new YandexStrategy({
     if (rows.length) {
       user = rows[0];
 
-      // Если пользователь ранее заходил только по email — сохраняем yandexId
-      if (!user.google_id) {
-        await db.query(
-          'UPDATE users SET google_id = $1 WHERE id = $2',
-          [yandexId, user.id]
-        );
+      // Обновляем yandexId (храним его в google_id) и avatar_url
+      const updates = [];
+      const params  = [];
+      if (user.google_id !== yandexId) {
+        updates.push(`google_id = $${params.length + 1}`);
+        params.push(yandexId);
       }
-
-      // Если имя изменилось — обновляем
-      if (user.name !== name) {
+      if (user.avatar_url !== avatar) {
+        updates.push(`avatar_url = $${params.length + 1}`);
+        params.push(avatar);
+      }
+      if (updates.length) {
+        params.push(user.id);
         await db.query(
-          'UPDATE users SET name = $1 WHERE id = $2',
-          [name, user.id]
+          `UPDATE public.users SET ${updates.join(', ')} WHERE id = $${params.length}`,
+          params
         );
       }
     } else {
-      // Новый пользователь — вставляем сразу имя, email и yandexId
-      const insertRes = await db.query(
-        'INSERT INTO users (name, email, google_id) VALUES ($1, $2, $3) RETURNING *',
-        [name, email, yandexId]
+      // Новый пользователь
+      const insert = await db.query(
+        `INSERT INTO public.users
+           (name, email, google_id, avatar_url)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [name, email, yandexId, avatar]
       );
-      user = insertRes.rows[0];
+      user = insert.rows[0];
     }
 
-    return done(null, user);
+    done(null, user);
   } catch (err) {
-    return done(err, null);
+    done(err, null);
   }
 }));
 
@@ -65,7 +77,7 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   try {
     const { rows } = await db.query(
-      'SELECT * FROM users WHERE id = $1',
+      'SELECT * FROM public.users WHERE id = $1',
       [id]
     );
     done(null, rows[0] || false);
