@@ -40,7 +40,7 @@ class DemucsProcessor:
         device_str = f"cuda:{gpu_index}" if device == "cuda" else "cpu"
         logger.info(f"[Demucs] Processing file: {input_path} on device: {device_str}")
 
-        args = shlex.split(f'--two-stems vocals -n {model} --device {device_str} "{input_path}"')
+        args = shlex.split(f'--two-stems vocals -n {model} --float32 --device {device_str} "{input_path}"')
 
         try:
             demucs.separate.main(args)

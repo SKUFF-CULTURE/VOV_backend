@@ -39,7 +39,7 @@ class NoiseReducer:
         y_denoised = nr.reduce_noise(y=y, sr=sr, y_noise=y_noise)
 
         logger.info(f"[NoiseReducer] Saving denoised audio to: {output_path}")
-        sf.write(str(output_path), y_denoised, sr)
+        sf.write(str(output_path), y_denoised, sr, subtype='FLOAT')
 
         return str(output_path)
 
