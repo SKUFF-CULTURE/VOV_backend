@@ -1,8 +1,0 @@
-_-_-_ CHECKPOINT STORAGE _-_-_
-
-The contained file singing_voice_pretrain_44kHz_6s-325kits.pt
-is created and owned by https://github.com/eloimoliner/
-It is replicated here to get rid of wget request to file hosting
-
-File is shared freely and protected with MIT License
-

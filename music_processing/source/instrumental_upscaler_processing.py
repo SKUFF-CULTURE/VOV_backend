@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 class AudioSRRestorer:
     @staticmethod
-    def _split_audio(audio_path, chunk_size=5000):
+    def _split_audio(audio_path, chunk_size=10000):
         audio_path = Path(audio_path).resolve()
         audio = AudioSegment.from_wav(audio_path)
 
@@ -64,7 +64,7 @@ class AudioSRRestorer:
         logger.info(f"[Collect] Combined file saved to: {output_path}")
         return str(output_path)
 
-    def upscale(self, input_wav: str, save_dir: str, model_name="basic", device="cuda:0"):
+    def upscale(self, input_wav: str, save_dir: str, model_name="large", device="cuda:0"):
         input_path = Path(input_wav).resolve()
         save_dir = Path(save_dir).resolve()
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ class AudioSRRestorer:
         start_time = time.time()
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         for line in process.stdout:
-            logger.debug(line.strip())
+            logger.info(line.strip())
         process.wait()
         elapsed = time.time() - start_time
         logger.info(f"[AudioRestorer] Finished in {elapsed:.2f} seconds")

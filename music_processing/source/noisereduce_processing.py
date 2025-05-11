@@ -51,3 +51,5 @@ if __name__ == "__main__":
         output_path="audio/denoised/tiomnaia_noch_vocals_denoised.wav"
     )
     logger.info(f"[NoiseReducer] Done: {result_path}")
+
+# TODO: Get rid of extra debug files
