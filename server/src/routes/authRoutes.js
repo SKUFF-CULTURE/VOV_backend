@@ -18,7 +18,7 @@ function issueTokenAndRedirect(req, res) {
   );
 
   // пересылаем на фронт вместе с токеном
-  res.redirect(`http://localhost:3000/dashboard?token=${token}`);
+  res.redirect(`http://localhost:3000/callback?token=${token}`);
   //res.json({ token, user: req.user });
 }
 

@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100),
   email VARCHAR(100) UNIQUE,
-  google_id VARCHAR(255),
+  google_id VARCHAR(255)
 );
 ALTER TABLE public.users
   ADD COLUMN avatar_url TEXT;
