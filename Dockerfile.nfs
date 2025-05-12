@@ -1,0 +1,28 @@
+# Используем легковесный образ
+FROM ubuntu:latest
+
+# Обновляем систему и устанавливаем необходимые пакеты
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    nfs-kernel-server \
+    rpcbind && \
+    rm -rf /var/lib/apt/lists/* \
+    curl || apt-get update --fix-missing
+
+# Проверяем, где находится rpcbind
+RUN if [ ! -f /usr/sbin/rpcbind ]; then echo "rpcbind not found"; exit 1; fi
+
+# Создаем директорию для общего хранилища
+RUN mkdir -p /mnt/nfs_share
+
+# Настроим права на директорию
+RUN chown nobody:nogroup /mnt/nfs_share && chmod 777 /mnt/nfs_share
+
+# Копируем конфиг для NFS, чтобы настроить экспорт
+COPY nfs/exports /etc/exports
+
+# Открываем порты для NFS
+EXPOSE 2049 111 20048
+
+# Запускаем службы NFS
+CMD ["bash", "-c", "service rpcbind start && service nfs-kernel-server start && tail -f /dev/null"]
