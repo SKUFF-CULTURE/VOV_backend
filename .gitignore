@@ -1,0 +1,3 @@
+/server/node_modules
+server_config.env
+postgres.env
