@@ -34,3 +34,5 @@ kafka-shell:
 # Вывести логи Kafka контейнера
 kafka-logs:
 	docker-compose logs -f kafka
+db:
+	docker-compose exec db psql -U postgres -d vov
