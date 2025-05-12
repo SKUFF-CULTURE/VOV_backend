@@ -2,11 +2,14 @@ KAFKA_BROKER = "kafka:9092"
 
 KAFKA_TOPICS = {
     "nettools": "app.main.nettools",
+    "audio_raw": "app.main.audio_raw",
+    "audio_processed": "app.main.audio_processed",
 }
 
 KAFKA_CONSUMER_GROUPS = {
     # Group for net producers
-    "nettools_group_p": "app.nettools.group.producer",
+    "nettools_group": "app.nettools.group",
+    "audio_group": "app.main.audio.group",
 }
 
 ACTOR_GRACE_PERIOD = 20
