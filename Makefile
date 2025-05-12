@@ -17,7 +17,7 @@ run:
 
 # Остановка и удаление контейнеров
 stop:
-	docker-compose down
+	docker-compose down -v
 
 # Вывести логи всех контейнеров
 logs:
