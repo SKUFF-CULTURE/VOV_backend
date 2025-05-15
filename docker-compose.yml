@@ -62,17 +62,17 @@ services:
     networks:
       - kafka-network
 
-nfs-server:
-    build:
-      context: .  
-      dockerfile: Dockerfile.nfs
-    volumes:
-      - nfs-data:/mnt/nfs_share
-    privileged: true
-    ports:
-      - "2049:2049"
-    networks:
-      - kafka-network
+  nfs-server:
+      build:
+        context: .  
+        dockerfile: Dockerfile.nfs
+      volumes:
+        - nfs-data:/mnt/nfs_share
+      privileged: true
+      ports:
+        - "2049:2049"
+      networks:
+        - kafka-network
 
 
 s3-minio:
