@@ -17,7 +17,7 @@ run:
 
 # Остановка и удаление контейнеров
 stop:
-	docker-compose down
+	docker-compose down -v
 
 # Вывести логи всех контейнеров
 logs:
@@ -34,3 +34,5 @@ kafka-shell:
 # Вывести логи Kafka контейнера
 kafka-logs:
 	docker-compose logs -f kafka
+db:
+	docker-compose exec db psql -U postgres -d vov
