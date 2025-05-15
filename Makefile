@@ -29,7 +29,7 @@ shell:
 
 # Зайти внутрь контейнера Kafka
 kafka-shell:
-	docker-compose exec kafka bash
+	docker-compose exec sosalovo bash
 
 # Вывести логи Kafka контейнера
 kafka-logs:

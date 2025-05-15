@@ -75,6 +75,20 @@ nfs-server:
       - kafka-network
 
 
+s3-minio:
+    image: quay.io/minio/minio
+    container_name: s3-minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9090:9090"   # Web Console
+    env_file:
+      - s3-minio.env
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio-data:/data
+    networks:
+      - kafka-network
+
 networks:
   kafka-network:
     driver: bridge
@@ -82,3 +96,5 @@ networks:
 volumes:
   db-data:
   nfs-data: {}
+  minio-data:
+
