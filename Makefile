@@ -17,15 +17,14 @@ run:
 
 # Остановка и удаление контейнеров
 stop:
+	docker-compose down
+
+flush:
 	docker-compose down -v
 
 # Вывести логи всех контейнеров
 logs:
 	docker-compose logs -f
-
-# Зайти внутрь контейнера Flask
-shell:
-	docker-compose exec flask_app bash
 
 # Зайти внутрь контейнера Kafka
 kafka-shell:
