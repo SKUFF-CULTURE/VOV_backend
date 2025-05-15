@@ -1,5 +1,4 @@
 services:
-
   zookeeper:
     image: bitnami/zookeeper:latest
     ports:
@@ -24,6 +23,7 @@ services:
       - kafka-network
     depends_on:
       - zookeeper
+
   db:
     image: postgres:13
     restart: always
@@ -55,6 +55,7 @@ services:
     networks:
       - kafka-network
     command: npm run dev
+
   redis:
     image: redis:latest
     ports:
@@ -63,19 +64,18 @@ services:
       - kafka-network
 
   nfs-server:
-      build:
-        context: .  
-        dockerfile: Dockerfile.nfs
-      volumes:
-        - nfs-data:/mnt/nfs_share
-      privileged: true
-      ports:
-        - "2049:2049"
-      networks:
-        - kafka-network
+    build:
+      context: .
+      dockerfile: Dockerfile.nfs
+    volumes:
+      - nfs-data:/mnt/nfs_share
+    privileged: true
+    ports:
+      - "2049:2049"
+    networks:
+      - kafka-network
 
-
-s3-minio:
+  s3-minio:
     image: quay.io/minio/minio
     container_name: s3-minio
     ports:
@@ -97,4 +97,3 @@ volumes:
   db-data:
   nfs-data: {}
   minio-data:
-
