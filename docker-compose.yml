@@ -52,6 +52,7 @@ services:
     volumes:
       - ./server:/app
       - nfs-data:/mnt/nfs_share
+      - /app/node_modules
     networks:
       - kafka-network
     command: npm run dev
