@@ -6,35 +6,35 @@ IMAGE_NAME=sosalovo-container
 
 # Сборка Docker-образов через docker-compose
 build:
-	docker-compose build
+	docker compose build
 
 rebuild:
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 # Запуск контейнеров через docker-compose
 run:
-	docker-compose up -d
+	docker compose up -d
 
 # Остановка и удаление контейнеров
 stop:
-	docker-compose down
+	docker compose down
 
 flush:
-	docker-compose down -v
+	docker compose down -v
 
 # Вывести логи всех контейнеров
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # Зайти внутрь контейнера Kafka
 kafka-shell:
-	docker-compose exec sosalovo bash
+	docker compose exec sosalovo bash
 
 # Вывести логи Kafka контейнера
 kafka-logs:
-	docker-compose logs -f kafka
+	docker compose logs -f kafka
 db:
-	docker-compose exec db psql -U postgres -d vov
+	docker compose exec db psql -U postgres -d vov
 
 
 # Special for arch nerd
