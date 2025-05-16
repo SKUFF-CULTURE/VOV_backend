@@ -13,25 +13,14 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users
   ADD COLUMN avatar_url TEXT;
 
-CREATE TABLE IF NOT EXISTS public.songs (
-  id             SERIAL PRIMARY KEY,
-  path           TEXT    UNIQUE       NOT NULL,
-  file_format    TEXT                  NULL,
-  title          TEXT                  NULL,
-  artist         TEXT                  NULL,
-  album          TEXT                  NULL,
-  genre          TEXT                  NULL,
-  track_number   TEXT                  NULL,
-  release_date   TEXT                  NULL,
-  duration       INTEGER               NULL
-);
 
 -- Таблица restorations
 CREATE TABLE IF NOT EXISTS public.restorations (
   id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id     INTEGER     NOT NULL
     REFERENCES public.users(id) ON DELETE CASCADE,
-  file_path   TEXT        NOT NULL,
+  file_path_original   TEXT        NOT NULL,
+  file_path_processed TEXT         NULL,
   status      VARCHAR(50) NOT NULL DEFAULT 'uploaded',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const sharp           = require('sharp');
 const Minio           = require('minio');
-const dg              = require('../dg');
+const dg              = require('../config/db');
 
 const minioClient = new Minio.Client({
   endPoint:   process.env.MINIO_ENDPOINT,
