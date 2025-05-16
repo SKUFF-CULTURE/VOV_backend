@@ -107,31 +107,30 @@ services:
       - kafka-network
     restart: unless-stopped
 
-  # s3-minio:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.minio
-  #   container_name: s3-minio
-  #   ports:
-  #     - "9000:9000"   # S3 API
-  #     - "9090:9090"   # Web Console
-  #   env_file:
-  #     - s3-minio.env
-  #   environment:
-  #     MINIO_BROWSER: "on"
-  #     MINIO_SERVER_URL: "http://localhost:9000"  # Для корректных ссылок в UI
-  #   command: server /data --console-address ":9090"
-  #   volumes:
-  #     - minio-data:/data
-  #     - minio-config:/root/.minio
-  #   networks:
-  #     - kafka-network
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-  #     interval: 30s
-  #     timeout: 5s
-  #     retries: 3
+  s3-minio:
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    container_name: s3-minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9090:9090"   # Web Console
+    env_file:
+      - s3-minio.env
+    environment:
+      MINIO_BROWSER: "on"
+      MINIO_SERVER_URL: "http://localhost:9000"  # Для корректных ссылок в UI
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio-data:/data
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 networks:
   kafka-network:
