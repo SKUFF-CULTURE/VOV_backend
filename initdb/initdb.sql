@@ -1,50 +1,48 @@
--- === Добавляем UUID-расширение для генерации uuid_generate_v4() ===
+-- === 1. Расширение для UUID ===
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- === Существующие таблицы ===
-
+-- === 2. Таблица пользователей ===
 CREATE TABLE IF NOT EXISTS public.users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(100) UNIQUE,
-  google_id VARCHAR(255)
+  id         SERIAL PRIMARY KEY,
+  name       VARCHAR(100),
+  email      VARCHAR(100) UNIQUE,
+  google_id  VARCHAR(255)
 );
 
 ALTER TABLE public.users
-  ADD COLUMN avatar_url TEXT;
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
-
--- Таблица restorations
+-- === 3. Таблица restorations ===
 CREATE TABLE IF NOT EXISTS public.restorations (
-  id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     INTEGER     NOT NULL
+  id                   UUID        PRIMARY KEY DEFAULT public.uuid_generate_v4(),
+  user_id              INTEGER     NOT NULL
     REFERENCES public.users(id) ON DELETE CASCADE,
   file_path_original   TEXT        NOT NULL,
-  file_path_processed TEXT         NULL,
-  status      VARCHAR(50) NOT NULL DEFAULT 'uploaded',
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  file_path_processed  TEXT        NULL,
+  status               VARCHAR(50) NOT NULL DEFAULT 'uploaded',
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Функция и триггер для автоматического обновления updated_at
-CREATE OR REPLACE FUNCTION public.trg_set_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+-- === 4. Общая функция для updated_at-триггеров ===
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS set_updated_at ON public.restorations;
-
-CREATE TRIGGER set_updated_at
+-- === 5. Триггер на restorations ===
+DROP TRIGGER IF EXISTS trg_restorations_updated_at ON public.restorations;
+CREATE TRIGGER trg_restorations_updated_at
   BEFORE UPDATE ON public.restorations
   FOR EACH ROW
-  EXECUTE PROCEDURE public.trg_set_updated_at();
+  EXECUTE FUNCTION public.update_updated_at_column();
 
--- === Новая таблица для метаданных ===
+-- === 6. Таблица restoration_metadata ===
 CREATE TABLE IF NOT EXISTS public.restoration_metadata (
-  id              UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID        PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   restoration_id  UUID        NOT NULL
     REFERENCES public.restorations(id) ON DELETE CASCADE,
   title           TEXT        NULL,
@@ -56,9 +54,9 @@ CREATE TABLE IF NOT EXISTS public.restoration_metadata (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Триггер для updated_at в metadata
-DROP TRIGGER IF EXISTS set_updated_at ON public.restoration_metadata;
-CREATE TRIGGER set_updated_at
+-- === 7. Триггер на restoration_metadata ===
+DROP TRIGGER IF EXISTS trg_metadata_updated_at ON public.restoration_metadata;
+CREATE TRIGGER trg_metadata_updated_at
   BEFORE UPDATE ON public.restoration_metadata
   FOR EACH ROW
-  EXECUTE PROCEDURE public.trg_set_updated_at();
+  EXECUTE FUNCTION public.update_updated_at_column();
