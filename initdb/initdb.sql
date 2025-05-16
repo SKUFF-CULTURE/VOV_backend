@@ -62,7 +62,6 @@ CREATE TABLE IF NOT EXISTS public.restoration_metadata (
   author          TEXT        NULL,
   year            VARCHAR(4)  NULL,
   album           TEXT        NULL,
-  country         TEXT        NULL,
   cover_url       TEXT        NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
