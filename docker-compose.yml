@@ -93,19 +93,19 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass your_redis_password  # Добавьте пароль
 
-  nfs-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.nfs
-    container_name: nfs-server
-    volumes:
-      - nfs-data:/mnt/nfs_share
-    privileged: true
-    ports:
-      - "2049:2049"
-    networks:
-      - kafka-network
-    restart: unless-stopped
+  # nfs-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.nfs
+  #   container_name: nfs-server
+  #   volumes:
+  #     - nfs-data:/mnt/nfs_share
+  #   privileged: true
+  #   ports:
+  #     - "2049:2049"
+  #   networks:
+  #     - kafka-network
+  #   restart: unless-stopped
 
   s3-minio:
     build:

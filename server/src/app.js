@@ -5,9 +5,9 @@ require('./config/passport-yandex');
 const cors = require('cors')
 const app = express();
 require('dotenv').config();
-
+const {initBuckets} = require('./utils/minio-init.js')
 app.use(express.json());
-
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 

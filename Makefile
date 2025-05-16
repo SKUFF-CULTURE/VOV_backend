@@ -17,7 +17,7 @@ run:
 
 # Остановка и удаление контейнеров
 stop:
-	docker compose down
+	docker compose down 
 
 flush:
 	docker compose down -v
