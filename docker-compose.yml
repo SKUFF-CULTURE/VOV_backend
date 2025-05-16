@@ -1,18 +1,28 @@
-services:
+version: '3.8'  # Явно указываем версию
 
+services:
   zookeeper:
     image: bitnami/zookeeper:latest
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_MAX_CLIENT_CNXNS: 60  # Лимит соединений
     networks:
       - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "zkServer.sh status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   kafka:
     build:
       context: .
       dockerfile: Dockerfile.kafka
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
@@ -20,13 +30,20 @@ services:
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"  # Настройки памяти
     networks:
       - kafka-network
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - kafka-data:/bitnami/kafka
+
   db:
     image: postgres:13
-    restart: always
+    container_name: postgres
+    restart: unless-stopped
     env_file:
       - postgres.env
     ports:
@@ -37,16 +54,25 @@ services:
       - nfs-data:/mnt/nfs_share
     networks:
       - kafka-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   server:
     build: ./server
+    container_name: server
     env_file:
       - server_config.env
     depends_on:
-      - db
-      - kafka
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       PORT: 5000
+      NODE_ENV: development
     ports:
       - "5000:5000"
     volumes:
@@ -55,31 +81,67 @@ services:
       - /app/node_modules
     networks:
       - kafka-network
-    command: npm run dev
+    restart: unless-stopped
+
   redis:
     image: redis:latest
+    container_name: redis
     ports:
       - "6379:6379"
     networks:
       - kafka-network
+    restart: unless-stopped
+    command: redis-server --requirepass your_redis_password  # Добавьте пароль
 
   nfs-server:
-      build:
-        context: .  
-        dockerfile: Dockerfile.nfs
-      volumes:
-        - nfs-data:/mnt/nfs_share
-      privileged: true
-      ports:
-        - "2049:2049"
-      networks:
-        - kafka-network
+    build:
+      context: .
+      dockerfile: Dockerfile.nfs
+    container_name: nfs-server
+    volumes:
+      - nfs-data:/mnt/nfs_share
+    privileged: true
+    ports:
+      - "2049:2049"
+    networks:
+      - kafka-network
+    restart: unless-stopped
 
+  s3-minio:
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    container_name: s3-minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9090:9090"   # Web Console
+    env_file:
+      - s3-minio.env
+    environment:
+      MINIO_BROWSER: "on"
+      MINIO_SERVER_URL: "http://localhost:9000"  # Для корректных ссылок в UI
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio-data:/data
+      - minio-config:/root/.minio
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 networks:
   kafka-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16  # Фиксированная подсеть
 
 volumes:
   db-data:
-  nfs-data: {}
+  nfs-data:
+  minio-data:
+  kafka-data:

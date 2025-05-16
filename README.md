@@ -21,6 +21,10 @@ choco install make
 ```powershell
 make --version
 ```
+
+#### Добавьте .env файлы из Obsidian
+`s3-minio.env`, `postgres.env`, `server-config.env`.
+
 ### 3️⃣ Соберите контейнеры
 
 ```bash
