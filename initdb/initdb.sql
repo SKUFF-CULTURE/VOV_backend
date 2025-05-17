@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-  
+
 -- === 3. Таблица restorations ===
 CREATE TABLE IF NOT EXISTS public.restorations (
   id                   UUID        PRIMARY KEY DEFAULT public.uuid_generate_v4(),
@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.restoration_metadata (
   author          TEXT        NULL,
   year            VARCHAR(4)  NULL,
   album           TEXT        NULL,
+  country         TEXT        NULL,
   cover_url       TEXT        NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
