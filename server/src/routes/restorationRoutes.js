@@ -16,5 +16,5 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post('/upload',   upload.single('file'), ctrl.uploadAudio);
 router.post('/metadata', express.json(),        ctrl.uploadMetadata);
 router.get('/download/:trackId', ctrl.downloadTrack);
-
+router.get('/isReady', ctrl.isReady)
 module.exports = router;

@@ -159,3 +159,11 @@ exports.downloadTrack = async (req, res) => {
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
+exports.isReady = (req, res) => {
+  const { trackId } = req.query;
+  if (!trackId) {
+    return res.status(400).json({ error: 'trackId обязателен' });
+  }
+  // Здесь в будущем будет проверка статуса обработки в БД/очереди
+  return res.sendStatus(200);
+};
