@@ -11,16 +11,6 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
   
--- === Миграция: создаём таблицу «личной библиотеки» пользователей ===
-CREATE TABLE IF NOT EXISTS public.user_library (
-  user_id   INTEGER    NOT NULL
-    REFERENCES public.users(id) ON DELETE CASCADE,
-  track_id  UUID       NOT NULL
-    REFERENCES public.restorations(id) ON DELETE CASCADE,
-  added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, track_id)
-);
-
 -- === 3. Таблица restorations ===
 CREATE TABLE IF NOT EXISTS public.restorations (
   id                   UUID        PRIMARY KEY DEFAULT public.uuid_generate_v4(),
@@ -69,3 +59,13 @@ CREATE TRIGGER trg_metadata_updated_at
   BEFORE UPDATE ON public.restoration_metadata
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
+
+-- === 8. Миграция: создаём таблицу «личной библиотеки» пользователей ===
+CREATE TABLE IF NOT EXISTS public.user_library (
+  user_id   INTEGER    NOT NULL
+    REFERENCES public.users(id) ON DELETE CASCADE,
+  track_id  UUID       NOT NULL
+    REFERENCES public.restorations(id) ON DELETE CASCADE,
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, track_id)
+);
