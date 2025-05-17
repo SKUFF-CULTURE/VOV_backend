@@ -21,3 +21,16 @@ def flush(dir_path: str):
                 logger.warning(f"[Toolbox] Could not delete file {file}: {e}")
 
     logger.info(f"[Toolbox] Removed {removed_files} files from: {dir_path}")
+
+def make_name(path:str, suffix: str):
+    path_obj = Path(path)
+    name = path_obj.stem  # "example"
+    ext = path_obj.suffix  # ".txt"
+    name += suffix
+    name += ext
+    return name
+
+
+
+
+

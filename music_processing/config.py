@@ -14,7 +14,7 @@ KAFKA_CONSUMER_GROUPS = {
 
 ACTOR_GRACE_PERIOD = 20
 
-NFS_MOUNT_POINT = "/mnt/nfs_share"
+NFS_MOUNT_POINT = "/mnt/nfs_share/"
 
 '''
 DOWNLOAD_FOLDER = NFS_MOUNT_POINT + "/downloads/archives/"
