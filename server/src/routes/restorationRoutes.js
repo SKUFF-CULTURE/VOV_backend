@@ -15,6 +15,11 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.post('/upload',   upload.single('file'), ctrl.uploadAudio);
 router.post('/metadata', express.json(),        ctrl.uploadMetadata);
+// Стриминг (для плеера)
+router.get('/stream/:trackId', ctrl.streamTrack);
+
+// Скачивание (attachment)
 router.get('/download/:trackId', ctrl.downloadTrack);
+
 router.get('/isReady', ctrl.isReady)
 module.exports = router;

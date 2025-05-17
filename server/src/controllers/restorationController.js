@@ -115,50 +115,89 @@ exports.uploadMetadata = async (req, res) => {
 };
 
 // === 3. Генерация подписанного URL для скачивания ===
+// Промисификатор presignedGetObject
+async function resolveObject(trackId, version) {
+  const { rows } = await dg.query(
+    `SELECT file_path_original, file_path_processed
+       FROM public.restorations
+      WHERE id = $1`, [trackId]
+  );
+  if (!rows.length) throw { status: 404, message: 'Трек не найден' };
+  const { file_path_original, file_path_processed } = rows[0];
+  if (version === 'original') return file_path_original;
+  if (version === 'processed' && file_path_processed) return file_path_processed;
+  if (!version && file_path_processed) return file_path_processed;
+  return file_path_original;
+}
+
+// === 1) Streaming with Range support ===
+exports.streamTrack = async (req, res) => {
+  try {
+    const { trackId } = req.params;
+    const version     = req.query.version; 
+    const path        = await resolveObject(trackId, version);
+    const [bucket, ...parts] = path.split('/');
+    const objectName = parts.join('/');
+
+    // Получаем информацию об объекте (размер)
+    const stat = await minioClient.statObject(bucket, objectName);
+    const total = stat.size;
+
+    const range = req.headers.range;
+    let start = 0, end = total - 1, statusCode = 200;
+    if (range) {
+      const matches = /bytes=(\d+)-(\d*)/.exec(range);
+      if (matches) {
+        start = parseInt(matches[1], 10);
+        end   = matches[2] ? parseInt(matches[2], 10) : end;
+        statusCode = 206;
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+      }
+    }
+
+    res.status(statusCode);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Content-Length', end - start + 1);
+    res.setHeader('Content-Type', stat.metaData['content-type'] || 'application/octet-stream');
+
+    const stream = await minioClient.getObject(bucket, objectName, start, end);
+    stream.pipe(res);
+    stream.on('error', err => {
+      console.error('Stream error:', err);
+      if (!res.headersSent) res.sendStatus(500);
+    });
+  } catch (err) {
+    console.error('Ошибка streamTrack:', err);
+    res.status(err.status || 500).json({ error: err.message || 'Внутренняя ошибка' });
+  }
+};
+
+// === 2) Download (attachment) ===
 exports.downloadTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
-    const version     = req.query.version; // 'original' или 'processed'
-
-    // Получаем оба пути
-    const { rows } = await dg.query(
-      `SELECT file_path_original, file_path_processed
-       FROM public.restorations
-       WHERE id = $1`,
-      [trackId]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Трек не найден' });
-    }
-
-    const { file_path_original, file_path_processed } = rows[0];
-
-    // Выбираем путь
-    let chosenPath;
-    if (version === 'original') {
-      chosenPath = file_path_original;
-    } else if (version === 'processed' && file_path_processed) {
-      chosenPath = file_path_processed;
-    } else if (file_path_processed) {
-      chosenPath = file_path_processed;
-    } else {
-      chosenPath = file_path_original;
-    }
-
-    // Генерим pre-signed URL
-    const [bucket, ...parts] = chosenPath.split('/');
+    const version     = req.query.version; 
+    const path        = await resolveObject(trackId, version);
+    const [bucket, ...parts] = path.split('/');
     const objectName = parts.join('/');
-    const url = await presignedGetAsync(bucket, objectName, 3600);
 
-    return res.status(200).json({
-      version: version || (file_path_processed ? 'processed' : 'original'),
-      url
+    // Получаем объект как поток
+    const stream = await minioClient.getObject(bucket, objectName);
+    // Заголовки для скачивания
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(objectName)}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    stream.pipe(res);
+    stream.on('error', err => {
+      console.error('Download stream error:', err);
+      if (!res.headersSent) res.sendStatus(500);
     });
   } catch (err) {
     console.error('Ошибка downloadTrack:', err);
-    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    res.status(err.status || 500).json({ error: err.message || 'Внутренняя ошибка' });
   }
 };
+
+
 exports.isReady = (req, res) => {
   const { trackId } = req.query;
   if (!trackId) {
