@@ -8,9 +8,18 @@ CREATE TABLE IF NOT EXISTS public.users (
   email      VARCHAR(100) UNIQUE,
   google_id  VARCHAR(255)
 );
-
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+  
+-- === Миграция: создаём таблицу «личной библиотеки» пользователей ===
+CREATE TABLE IF NOT EXISTS public.user_library (
+  user_id   INTEGER    NOT NULL
+    REFERENCES public.users(id) ON DELETE CASCADE,
+  track_id  UUID       NOT NULL
+    REFERENCES public.restorations(id) ON DELETE CASCADE,
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, track_id)
+);
 
 -- === 3. Таблица restorations ===
 CREATE TABLE IF NOT EXISTS public.restorations (
@@ -33,7 +42,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- === 5. Триггер на restorations ===
+-- === 5. Триггер на public.restorations ===
 DROP TRIGGER IF EXISTS trg_restorations_updated_at ON public.restorations;
 CREATE TRIGGER trg_restorations_updated_at
   BEFORE UPDATE ON public.restorations
@@ -54,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.restoration_metadata (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- === 7. Триггер на restoration_metadata ===
+-- === 7. Триггер на public.restoration_metadata ===
 DROP TRIGGER IF EXISTS trg_metadata_updated_at ON public.restoration_metadata;
 CREATE TRIGGER trg_metadata_updated_at
   BEFORE UPDATE ON public.restoration_metadata

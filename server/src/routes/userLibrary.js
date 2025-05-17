@@ -1,0 +1,24 @@
+// routes/userLibrary.js
+const express = require('express');
+const router  = express.Router();
+const ctrl    = require('../controllers/userLibraryController');
+
+// добавить в библиотеку:
+// POST /users/library
+// Body: { userId, trackId }
+router.post(
+  '/library',
+  express.json(),
+  ctrl.addToLibrary
+);
+
+// получить всю библиотеку пользователя:
+// POST /users/library/list
+// Body: { userId }
+router.get(
+  '/library/list',
+  express.json(),
+  ctrl.getLibrary
+);
+
+module.exports = router;

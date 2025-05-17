@@ -33,11 +33,13 @@ app.use(passport.session());
 const authRoutes = require('./routes/authRoutes');
 const songsRoutes = require('./routes/songs');
 const restorationRouter = require('./routes/restorationRoutes.js');
+const userLibraryRoutes = require('./routes/userLibrary')
 
 // Подключение маршрутов
 app.use('/auth', authRoutes);                 //auth (+)  
 app.use('/api', songsRoutes);
 app.use('/restoration', restorationRouter)
+app.use('/users', userLibraryRoutes)
 
 // Базовый роут
 app.get('/', (req, res) => {
