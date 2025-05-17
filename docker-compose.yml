@@ -1,4 +1,4 @@
-version: '3.8'  # Явно указываем версию
+# version: '3.8'  # Явно указываем версию
 
 services:
   zookeeper:
