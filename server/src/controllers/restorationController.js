@@ -62,7 +62,7 @@ exports.uploadAudio = async (req, res) => {
       RETURNING id;
     `;
 
-    const { rows } = await dg.query(insert, [id, userId, filePath]);
+    const { rows } = await db.query(insert, [id, userId, filePath]);
     return res.status(200).json({ id: rows[0].id });
   } catch (e) {
     console.error('Ошибка uploadAudio:', e);
@@ -108,7 +108,7 @@ exports.uploadMetadata = async (req, res) => {
       RETURNING id;
     `;
     const vals = [trackId, title, author, year, album, country, coverPath];
-    const { rows } = await dg.query(insertMeta, vals);
+    const { rows } = await db.query(insertMeta, vals);
     return res.status(200).json({ metadataId: rows[0].id });
   } catch (e) {
     console.error('Ошибка uploadMetadata:', e);
@@ -117,9 +117,9 @@ exports.uploadMetadata = async (req, res) => {
 };
 
 // === 3. Генерация подписанного URL для скачивания ===
-// Промисификатор presignedGetObject
+// Промисификатор presignedbetObject
 async function resolveObject(trackId, version) {
-  const { rows } = await dg.query(
+  const { rows } = await db.query(
     `SELECT file_path_original, file_path_processed
        FROM public.restorations
       WHERE id = $1`, [trackId]
@@ -140,7 +140,7 @@ exports.streamTrack = async (req, res) => {
     const path        = await resolveObject(trackId, version);
     const [bucket, ...parts] = path.split('/');
     const objectName = parts.join('/');
-    await dg.query(
+    await db.query(
       'UPDATE public.public_library SET play_count = play_count + 1 WHERE track_id = $1',
       [trackId]
     );

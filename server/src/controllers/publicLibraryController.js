@@ -107,3 +107,86 @@ exports.deletePublicTrack = async (req, res) => {
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
+exports.getTopByPlays = async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  try {
+    const { rows } = await db.query(
+      `SELECT
+         l.track_id    AS trackId,
+         m.title,
+         m.author,
+         m.year,
+         m.album,
+         m.country,
+         m.cover_url   AS coverUrl,
+         l.likes       AS likes,
+         l.play_count  AS playCount
+       FROM public.public_library AS l
+       JOIN public.restoration_metadata AS m
+         ON l.track_id = m.restoration_id
+       ORDER BY l.play_count DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return res.status(200).json({ tracks: rows });
+  } catch (err) {
+    console.error('Ошибка getTopByPlays:', err);
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+};
+
+// Получить топ по количеству лайков
+exports.getTopByLikes = async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  try {
+    const { rows } = await db.query(
+      `SELECT
+         l.track_id    AS trackId,
+         m.title,
+         m.author,
+         m.year,
+         m.album,
+         m.country,
+         m.cover_url   AS coverUrl,
+         l.likes       AS likes,
+         l.play_count  AS playCount
+       FROM public.public_library AS l
+       JOIN public.restoration_metadata AS m
+         ON l.track_id = m.restoration_id
+       ORDER BY l.likes DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return res.status(200).json({ tracks: rows });
+  } catch (err) {
+    console.error('Ошибка getTopByLikes:', err);
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+};
+exports.getTopByPlays = async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  try {
+    const { rows } = await db.query(
+      `SELECT
+         l.track_id    AS trackId,
+         m.title,
+         m.author,
+         m.year,
+         m.album,
+         m.country,
+         m.cover_url   AS coverUrl,
+         l.likes       AS likes,
+         l.play_count  AS playCount
+       FROM public.public_library AS l
+       JOIN public.restoration_metadata AS m
+         ON l.track_id = m.restoration_id
+       ORDER BY l.play_count DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return res.status(200).json({ tracks: rows });
+  } catch (err) {
+    console.error('Ошибка getTopByPlays:', err);
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+};
