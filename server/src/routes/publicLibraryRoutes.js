@@ -4,7 +4,9 @@ const {
   addPublicTrack,
   getAllPublicTracks,
   getPublicTrackById,
-  deletePublicTrack
+  deletePublicTrack,
+  getTopByPlays,
+  getTopByLikes
 } = require('../controllers/publicLibraryController');
 
 router.post('/', addPublicTrack);
