@@ -11,9 +11,9 @@ const {
 
 router.post('/', addPublicTrack);
 router.get('/', getAllPublicTracks);
-router.get('/:trackId', getPublicTrackById);
-router.delete('/:trackId', deletePublicTrack);
 router.get('/top-plays', getTopByPlays);
 router.get('/top-likes', getTopByLikes);
+router.get('/:trackId', getPublicTrackById);
+router.delete('/:trackId', deletePublicTrack);
 module.exports = router;
 
