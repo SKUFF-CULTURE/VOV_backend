@@ -1,5 +1,5 @@
 // controllers/userLibraryController.js
-const dg = require('../config/db');
+const db = require('../config/db');
 
 exports.addToLibrary = async (req, res) => {
   const { userId, trackId } = req.body;
@@ -9,7 +9,7 @@ exports.addToLibrary = async (req, res) => {
 
   try {
     // проверка существования пользователя
-    const user = await dg.query(
+    const user = await db.query(
       'SELECT 1 FROM public.users WHERE id = $1',
       [userId]
     );
@@ -18,7 +18,7 @@ exports.addToLibrary = async (req, res) => {
     }
 
     // проверка существования трека
-    const track = await dg.query(
+    const track = await db.query(
       'SELECT 1 FROM public.restorations WHERE id = $1',
       [trackId]
     );
@@ -37,7 +37,7 @@ exports.addToLibrary = async (req, res) => {
 
     // Если это первый раз — увеличиваем лайк (UPSERT в public_library)
     if (insertUserLib.rowCount > 0) {
-      const upsertLike = await dg.query(
+      const upsertLike = await db.query(
         `INSERT INTO public.public_library (track_id, likes, play_count)
            VALUES ($1, 1, 0)
          ON CONFLICT (track_id) DO
@@ -68,7 +68,7 @@ exports.getLibrary = async (req, res) => {
 
   try {
     // проверка существования пользователя
-    const user = await dg.query(
+    const user = await db.query(
       'SELECT 1 FROM public.users WHERE id = $1',
       [userId]
     );
@@ -76,17 +76,25 @@ exports.getLibrary = async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // получаем все треки из библиотеки
-    const { rows } = await dg.query(
+    // получаем все треки из библиотеки с метаданными
+    const { rows } = await db.query(
       `SELECT
          r.id                   AS trackId,
          r.file_path_original   AS originalPath,
          r.file_path_processed  AS processedPath,
          r.status,
-         ul.added_at            AS addedAt
+         ul.added_at            AS addedAt,
+         m.title,
+         m.author,
+         m.year,
+         m.album,
+         m.country,
+         m.cover_url            AS coverUrl
        FROM public.user_library ul
        JOIN public.restorations r
          ON r.id = ul.track_id
+       LEFT JOIN public.restoration_metadata m
+         ON r.id = m.restoration_id
        WHERE ul.user_id = $1
        ORDER BY ul.added_at DESC`,
       [userId]
