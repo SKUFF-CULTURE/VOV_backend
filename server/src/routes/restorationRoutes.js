@@ -5,7 +5,7 @@ const ctrl = require('../controllers/restorationController');
 
 const router = express.Router();
 // храним файл в памяти, чтобы сразу передать его в MinIO
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 70 * 1024 * 1024 } });
 
 /**
  * POST /restoration/upload

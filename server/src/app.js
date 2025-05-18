@@ -6,8 +6,8 @@ const cors = require('cors')
 const app = express();
 require('dotenv').config();
 const {initBuckets} = require('./utils/minio-init.js')
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({limit: '10mb'}));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
 
