@@ -15,7 +15,7 @@ router.post(
 // получить всю библиотеку пользователя:
 // POST /users/library/list
 // Body: { userId }
-router.get(
+router.post(
   '/library/list',
   express.json(),
   ctrl.getLibrary
