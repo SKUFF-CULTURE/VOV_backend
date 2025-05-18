@@ -26,21 +26,40 @@ exports.addToLibrary = async (req, res) => {
       return res.status(404).json({ error: 'Трек не найден' });
     }
 
-    // вставка (игнорируем дубли)
-    await dg.query(
+    // Вставка в user_library (игнорируем дубли)
+    const insertUserLib = await dg.query(
       `INSERT INTO public.user_library (user_id, track_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
+         VALUES ($1, $2)
+       ON CONFLICT DO NOTHING
+       RETURNING track_id`,
       [userId, trackId]
     );
 
-    return res.status(201).json({ userId, trackId });
+    // Если это первый раз — увеличиваем лайк (UPSERT в public_library)
+    if (insertUserLib.rowCount > 0) {
+      const upsertLike = await dg.query(
+        `INSERT INTO public.public_library (track_id, likes, play_count)
+           VALUES ($1, 1, 0)
+         ON CONFLICT (track_id) DO
+           UPDATE SET likes = public.public_library.likes + 1
+         RETURNING likes`,
+        [trackId]
+      );
+
+      return res.status(201).json({
+        userId,
+        trackId,
+        likes: upsertLike.rows[0].likes
+      });
+    }
+
+    // Уже в user_library — ничего не делаем с лайками
+    return res.status(200).json({ userId, trackId, message: 'Уже в библиотеке' });
   } catch (err) {
     console.error('Ошибка addToLibrary:', err);
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
-
 exports.getLibrary = async (req, res) => {
   const { userId } = req.body;
   if (!userId) {

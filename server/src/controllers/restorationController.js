@@ -61,12 +61,14 @@ exports.uploadAudio = async (req, res) => {
       VALUES ($1, $2, $3, 'uploaded')
       RETURNING id;
     `;
+
     const { rows } = await dg.query(insert, [id, userId, filePath]);
     return res.status(200).json({ id: rows[0].id });
   } catch (e) {
     console.error('Ошибка uploadAudio:', e);
     return res.status(500).json({ error: 'Ошибка загрузки файла' });
   }
+  
 };
 
 // === 2. Сохранение метаданных ===
@@ -138,6 +140,11 @@ exports.streamTrack = async (req, res) => {
     const path        = await resolveObject(trackId, version);
     const [bucket, ...parts] = path.split('/');
     const objectName = parts.join('/');
+    await dg.query(
+      'UPDATE public.public_library SET play_count = play_count + 1 WHERE track_id = $1',
+      [trackId]
+    );
+
 
     // Получаем информацию об объекте (размер)
     const stat = await minioClient.statObject(bucket, objectName);

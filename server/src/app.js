@@ -34,13 +34,13 @@ const authRoutes = require('./routes/authRoutes');
 const songsRoutes = require('./routes/songs');
 const restorationRouter = require('./routes/restorationRoutes.js');
 const userLibraryRoutes = require('./routes/userLibrary')
-
+const publicLibraryRoutes = require('./routes/publicLibraryRoutes.js')
 // Подключение маршрутов
 app.use('/auth', authRoutes);                 //auth (+)  
 app.use('/api', songsRoutes);
 app.use('/restoration', restorationRouter)
 app.use('/users', userLibraryRoutes)
-
+app.use('/public-library', publicLibraryRoutes)
 // Базовый роут
 app.get('/', (req, res) => {
   res.send('VOV Backend is running');

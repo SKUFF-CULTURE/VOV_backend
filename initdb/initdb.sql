@@ -70,3 +70,28 @@ CREATE TABLE IF NOT EXISTS public.user_library (
   added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, track_id)
 );
+-- 9. Создаём таблицу public_library
+CREATE TABLE IF NOT EXISTS public.public_library (
+  -- track_id — то же, что и restoration.id
+  track_id UUID PRIMARY KEY
+    REFERENCES public.restorations(id) ON DELETE CASCADE
+);
+
+-- Создаём VIEW для удобного получения метаданных вместе с записью из public_library
+CREATE OR REPLACE VIEW public.public_library_with_metadata AS
+SELECT
+  l.track_id,
+  m.title,
+  m.author,
+  m.year,
+  m.album,
+  m.country,
+  m.cover_url
+FROM
+  public.public_library AS l
+  JOIN public.restoration_metadata AS m
+    ON l.track_id = m.restoration_id;
+
+ALTER TABLE public.public_library
+  ADD COLUMN IF NOT EXISTS likes       INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS play_count  INTEGER NOT NULL DEFAULT 0;
