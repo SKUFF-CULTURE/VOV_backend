@@ -27,7 +27,7 @@ exports.addToLibrary = async (req, res) => {
     }
 
     // Вставка в user_library (игнорируем дубли)
-    const insertUserLib = await dg.query(
+    const insertUserLib = await db.query(
       `INSERT INTO public.user_library (user_id, track_id)
          VALUES ($1, $2)
        ON CONFLICT DO NOTHING
