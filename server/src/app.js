@@ -5,11 +5,11 @@ require('./config/passport-yandex');
 const cors = require('cors')
 const app = express();
 require('dotenv').config();
+const { ensureIndex } = require('./services/setupEs.js');
 const {initBuckets} = require('./utils/minio-init.js')
 app.use(express.json({limit: '10mb'}));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
-
 
 const corsOptions = {
   origin: 'http://localhost:3000', 
@@ -17,7 +17,11 @@ const corsOptions = {
   credentials: true, 
   optionsSuccessStatus: 204
 };
+
 app.use(cors(corsOptions));
+
+// Проверка индексации
+
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'some_secret_key',
@@ -32,15 +36,21 @@ app.use(passport.session());
 // Импорт маршрутов
 const authRoutes = require('./routes/authRoutes');
 const songsRoutes = require('./routes/songs');
-const restorationRouter = require('./routes/restorationRoutes.js');
+const restorationRoutes = require('./routes/restorationRoutes.js');
 const userLibraryRoutes = require('./routes/userLibrary')
 const publicLibraryRoutes = require('./routes/publicLibraryRoutes.js')
+const searchRoutes = require('./routes/searchRoutes.js');
+
 // Подключение маршрутов
 app.use('/auth', authRoutes);                 //auth (+)  
 app.use('/api', songsRoutes);
-app.use('/restoration', restorationRouter)
+app.use('/restoration', restorationRoutes)
 app.use('/users', userLibraryRoutes)
 app.use('/public-library', publicLibraryRoutes)
+app.use('/search',searchRoutes)
+
+
+
 // Базовый роут
 app.get('/', (req, res) => {
   res.send('VOV Backend is running');
