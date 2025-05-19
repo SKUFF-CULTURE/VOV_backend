@@ -9,6 +9,7 @@ services:
     environment:
       - discovery.type=single-node  # Исправлено
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - cluster.routing.allocation.disk.threshold_enabled=false  # Отключаем проверку диска
     ports:
       - "9200:9200"
     volumes:
