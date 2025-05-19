@@ -5,12 +5,20 @@ const Minio           = require('minio');
 const db              = require('../config/db');
 
 const minioClient = new Minio.Client({
-  endPoint:   process.env.MINIO_ENDPOINT || 'localhost',
+  endPoint: process.env.MINIO_ENDPOINT,
   port:       +process.env.MINIO_PORT  || 9000,
   useSSL:     process.env.MINIO_USE_SSL === 'true',
   accessKey:  process.env.MINIO_ACCESS_KEY,
   secretKey:  process.env.MINIO_SECRET_KEY,
 });
+const publicClient = new Minio.Client({
+  endPoint: process.env.MINIO_PUBLIC_ENDPOINT || 'localhost', // или ваш хост/домен
+  port:     +process.env.MINIO_PORT || 9000,
+  useSSL:   process.env.MINIO_USE_SSL === 'true',
+  accessKey: process.env.MINIO_ACCESS_KEY,
+  secretKey: process.env.MINIO_SECRET_KEY,
+});
+
 const BUCKET = process.env.MINIO_BUCKET || 'original';
 
 // Промисификация putObject
