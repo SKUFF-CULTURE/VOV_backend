@@ -1,29 +1,25 @@
-// server/scripts/reindex.js
-const {Pool} = require('../config/db.js');
-const {es} = require('../utils/esClient.js')
-
-const pg = new Pool();
+// серверный скрипт reindex.js
+const db = require('../config/db.js');    // <-- именно так, а не деструктурируя Pool
+const es = require('../utils/esClient.js');
+const { ensureIndex } = require('../services/setupEs.js');
 
 async function reindexAll() {
-  // 1) Убедимся, что индекс есть
-  await import('../services/setupEs.js').then(m => m.ensureIndex());
+  await ensureIndex();
 
-  // 2) Берём все треки + метаданные
-  const { rows: tracks } = await pg.query(`
+  // используем db.query, а не pg.query
+  const { rows: tracks } = await db.query(`
     SELECT r.id, m.title, m.author, m.album, m.year, m.country, m.cover_url
     FROM public.restorations r
     JOIN public.restoration_metadata m ON m.restoration_id = r.id
   `);
 
-  // 3) bulk index
   const body = tracks.flatMap(t => [
     { index: { _index: 'tracks', _id: t.id } },
     { ...t, is_public: true, user_ids: [] }
   ]);
   await es.bulk({ refresh: true, body });
 
-  // 4) Подтягиваем user_library
-  const { rows: libs } = await pg.query(`
+  const { rows: libs } = await db.query(`
     SELECT user_id, track_id
     FROM public.user_library
   `);
@@ -49,4 +45,7 @@ async function reindexAll() {
   process.exit(0);
 }
 
-reindexAll().catch(err => { console.error(err); process.exit(1); });
+reindexAll().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
