@@ -20,5 +20,9 @@ router.post(
   express.json(),
   ctrl.getLibrary
 );
-
+router.delete(
+  '/library',
+  express.json(),
+  ctrl.removeFromLibrary
+);
 module.exports = router;

@@ -33,7 +33,7 @@ exports.addToLibrary = async (req, res) => {
        ON CONFLICT DO NOTHING
        RETURNING track_id`,
       [userId, trackId]
-    );
+    )
 
     // Если это первый раз — увеличиваем лайк (UPSERT в public_library)
     if (insertUserLib.rowCount > 0) {
@@ -103,6 +103,67 @@ exports.getLibrary = async (req, res) => {
     return res.status(200).json({ tracks: rows });
   } catch (err) {
     console.error('Ошибка getLibrary:', err);
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+};
+exports.removeFromLibrary = async (req, res) => {
+  const { userId, trackId } = req.body;
+  if (!userId || !trackId) {
+    return res.status(400).json({ error: 'userId и trackId обязательны' });
+  }
+
+  try {
+    // проверка существования пользователя
+    const user = await db.query(
+      'SELECT 1 FROM public.users WHERE id = $1',
+      [userId]
+    );
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // проверка существования трека
+    const track = await db.query(
+      'SELECT 1 FROM public.restorations WHERE id = $1',
+      [trackId]
+    );
+    if (track.rowCount === 0) {
+      return res.status(404).json({ error: 'Трек не найден' });
+    }
+
+    // удаляем из user_library
+    const deleteResult = await db.query(
+      `DELETE FROM public.user_library
+         WHERE user_id = $1 AND track_id = $2
+       RETURNING track_id`,
+      [userId, trackId]
+    );
+
+    if (deleteResult.rowCount > 0) {
+      // уменьшаем лайки в public_library, но не ниже нуля
+      const updateLikes = await db.query(
+        `UPDATE public.public_library
+            SET likes = GREATEST(likes - 1, 0)
+          WHERE track_id = $1
+          RETURNING likes`,
+        [trackId]
+      );
+
+      return res.status(200).json({
+        userId,
+        trackId,
+        likes: updateLikes.rows[0].likes
+      });
+    }
+
+    // не было записи в user_library
+    return res.status(200).json({
+      userId,
+      trackId,
+      message: 'Трек не был в библиотеке'
+    });
+  } catch (err) {
+    console.error('Ошибка removeFromLibrary:', err);
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };

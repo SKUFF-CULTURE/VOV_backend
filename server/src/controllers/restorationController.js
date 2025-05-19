@@ -76,38 +76,51 @@ exports.uploadMetadata = async (req, res) => {
   console.log('BODY (uploadMetadata):', req.body);
 
   try {
-    const { trackId, title, author, year, album, country, coverUrl } = req.body;
+    const {
+      trackId,
+      title = null,
+      author = null,
+      year = null,
+      album = null,
+      country = null,
+      coverUrl = null
+    } = req.body;
+
     if (!trackId) {
       return res.status(400).json({ error: 'trackId обязателен' });
     }
 
-    let coverPath = null;
+    let coverBase64 = null;
     if (coverUrl) {
+      // Ожидаем Data URI: data:image/...;base64,XXXXX
       const match = coverUrl.match(/^data:image\/\w+;base64,(.+)$/);
       if (!match) {
-        return res.status(400).json({ error: 'Неверный формат coverUrl' });
+        return res.status(400).json({ error: 'Неверный формат coverUrl, ожидается data URI' });
       }
+
+      // Декодируем, конвертируем в PNG и снова кодируем в base64
       const imgBuf = Buffer.from(match[1], 'base64');
       const pngBuf = await sharp(imgBuf).png().toBuffer();
-      const objName = `covers/${trackId}.png`;
-
-      await putObjectAsync(
-        BUCKET,
-        objName,
-        pngBuf,
-        { 'Content-Type': 'image/png' }
-      );
-
-      coverPath = `${BUCKET}/${objName}`;
+      coverBase64 = `data:image/png;base64,${pngBuf.toString('base64')}`;
     }
 
+    // Вставляем все поля, cover_url теперь хранит Data URI с PNG
     const insertMeta = `
       INSERT INTO public.restoration_metadata
         (restoration_id, title, author, year, album, country, cover_url)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id;
     `;
-    const vals = [trackId, title, author, year, album, country, coverPath];
+    const vals = [
+      trackId,
+      title,
+      author,
+      year,
+      album,
+      country,
+      coverBase64
+    ];
+
     const { rows } = await db.query(insertMeta, vals);
     return res.status(200).json({ metadataId: rows[0].id });
   } catch (e) {
