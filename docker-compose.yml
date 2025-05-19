@@ -115,6 +115,8 @@ services:
 
   reindex-cron:
     build: ./server
+    env_file:
+      - server_config.env
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - NODE_ENV=development
@@ -126,6 +128,8 @@ services:
       - ./server:/app
       - ./server/node_modules:/app/node_modules  # Монтируем локальные node_modules
     command: npm run reindex:cron
+    networks:
+      - kafka-network
     
 
   redis:
