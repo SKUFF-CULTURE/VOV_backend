@@ -78,27 +78,32 @@ exports.getLibrary = async (req, res) => {
 
     // получаем все треки из библиотеки с метаданными
     const { rows } = await db.query(
-      `SELECT
-         r.id                   AS trackId,
-         r.file_path_original   AS originalPath,
-         r.file_path_processed  AS processedPath,
-         r.status,
-         ul.added_at            AS addedAt,
-         m.title,
-         m.author,
-         m.year,
-         m.album,
-         m.country,
-         m.cover_url            AS coverUrl
-       FROM public.user_library ul
-       JOIN public.restorations r
-         ON r.id = ul.track_id
-       LEFT JOIN public.restoration_metadata m
-         ON r.id = m.restoration_id
-       WHERE ul.user_id = $1
-       ORDER BY ul.added_at DESC`,
-      [userId]
-    );
+    `SELECT
+      r.id                     AS "trackId",
+      r.file_path_original     AS "originalPath",
+      r.file_path_processed    AS "processedPath",
+      r.status                 AS "status",
+      ul.added_at              AS "addedAt",
+      m.title                  AS "title",
+      m.author                 AS "author",
+      m.year                   AS "year",
+      m.album                  AS "album",
+      m.country                AS "country",
+      m.cover_url              AS "coverUrl",
+      COALESCE(pl.likes, 0)    AS "likes",
+      COALESCE(pl.play_count, 0) AS "playCount"
+    FROM public.user_library ul
+    JOIN public.restorations r
+      ON r.id = ul.track_id
+    LEFT JOIN public.restoration_metadata m
+      ON r.id = m.restoration_id
+    LEFT JOIN public.public_library pl
+      ON r.id = pl.track_id
+    WHERE ul.user_id = $1
+    ORDER BY ul.added_at DESC`,
+    [userId]
+  );
+
 
     return res.status(200).json({ tracks: rows });
   } catch (err) {

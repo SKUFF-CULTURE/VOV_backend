@@ -131,6 +131,20 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    container_name: vov_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsSL", "http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      interval: 10s
+      retries: 5
 
 networks:
   kafka-network:
@@ -144,3 +158,5 @@ volumes:
   nfs-data:
   minio-data:
   kafka-data:
+  esdata:
+    driver: local

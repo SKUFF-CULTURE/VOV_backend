@@ -5,7 +5,8 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
-        "dev": "npm install && nodemon server.js"
+        "dev": "npm install && nodemon server.js",
+        "reindex": "node ./scripts/reindex.js"
     },
     "dependencies": {
         "cors": "^2.8.5",
@@ -21,7 +22,8 @@
         "minio": "8.0.5",
         "uuid": "11.1.0",
         "multer": "1.4.5-lts.2",
-        "sharp": "0.34.1"
+        "sharp": "0.34.1",
+        "@elastic/elasticsearch":  "9.0.1"
     },
     "devDependencies": {
         "nodemon": "^3.1.9"
