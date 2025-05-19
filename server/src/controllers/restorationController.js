@@ -88,7 +88,7 @@ exports.uploadMetadata = async (req, res) => {
 
     if (!trackId) {
       return res.status(400).json({ error: 'trackId обязателен' });
-    }
+    }1
 
     let coverBase64 = null;
     if (coverUrl) {
@@ -149,43 +149,65 @@ async function resolveObject(trackId, version) {
 exports.streamTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
-    const version     = req.query.version; 
+    const version     = req.query.version;
     const path        = await resolveObject(trackId, version);
     const [bucket, ...parts] = path.split('/');
-    const objectName = parts.join('/');
+    const objectName  = parts.join('/');
+
+    // Инкремент play_count
     await db.query(
       'UPDATE public.public_library SET play_count = play_count + 1 WHERE track_id = $1',
       [trackId]
     );
 
-
-    // Получаем информацию об объекте (размер)
-    const stat = await minioClient.statObject(bucket, objectName);
+    // Получаем полную информацию об объекте
+    const stat  = await minioClient.statObject(bucket, objectName);
     const total = stat.size;
 
+    // Разбираем заголовок Range
     const range = req.headers.range;
     let start = 0, end = total - 1, statusCode = 200;
+
     if (range) {
       const matches = /bytes=(\d+)-(\d*)/.exec(range);
       if (matches) {
+        statusCode = 206;
         start = parseInt(matches[1], 10);
         end   = matches[2] ? parseInt(matches[2], 10) : end;
-        statusCode = 206;
-        res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+
+        // Если запрошенный диапазон за пределами — отвечаем 416
+        if (start >= total || start > end) {
+          res.status(416)
+             .setHeader('Content-Range', `bytes */${total}`)
+             .end();
+          return;
+        }
       }
     }
 
+    const chunkSize = end - start + 1;
+
+    // Устанавливаем заголовки
     res.status(statusCode);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Content-Length', end - start + 1);
+    res.setHeader('Content-Length', chunkSize);
     res.setHeader('Content-Type', stat.metaData['content-type'] || 'application/octet-stream');
+    if (statusCode === 206) {
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+    }
 
-    const stream = await minioClient.getObject(bucket, objectName, start, end);
-    stream.pipe(res);
+    // Правильно запрашиваем нужный диапазон у MinIO
+    // (см. метод getPartialObject в MinIO JS SDK) :contentReference[oaicite:0]{index=0}
+    const stream = await minioClient.getPartialObject(bucket, objectName, start, chunkSize);
+
     stream.on('error', err => {
       console.error('Stream error:', err);
       if (!res.headersSent) res.sendStatus(500);
     });
+
+    // Отдаём стрим клиенту
+    stream.pipe(res);
+
   } catch (err) {
     console.error('Ошибка streamTrack:', err);
     res.status(err.status || 500).json({ error: err.message || 'Внутренняя ошибка' });
