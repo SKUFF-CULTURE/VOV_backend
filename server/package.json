@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node server.js",
         "dev": "npm install && nodemon server.js",
-        "reindex": "node ./scripts/reindex.js"
+        "reindex": "node ./src/scripts/reindex.js"
     },
     "dependencies": {
         "cors": "^2.8.5",
