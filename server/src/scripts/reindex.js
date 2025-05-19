@@ -1,6 +1,6 @@
 // server/scripts/reindex.js
-import { Pool } from 'pg';
-import es from '../utils/esClient.js';
+const {Pool} = require('../config/db.js');
+const {es} = require('../utils/esClient.js')
 
 const pg = new Pool();
 

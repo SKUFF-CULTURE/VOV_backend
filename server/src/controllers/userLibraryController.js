@@ -79,19 +79,19 @@ exports.getLibrary = async (req, res) => {
     // получаем все треки из библиотеки с метаданными
     const { rows } = await db.query(
     `SELECT
-      r.id                     AS "trackId",
-      r.file_path_original     AS "originalPath",
-      r.file_path_processed    AS "processedPath",
-      r.status                 AS "status",
-      ul.added_at              AS "addedAt",
-      m.title                  AS "title",
-      m.author                 AS "author",
-      m.year                   AS "year",
-      m.album                  AS "album",
-      m.country                AS "country",
-      m.cover_url              AS "coverUrl",
-      COALESCE(pl.likes, 0)    AS "likes",
-      COALESCE(pl.play_count, 0) AS "playCount"
+      r.id                     AS trackId,
+      r.file_path_original     AS originalPath,
+      r.file_path_processed    AS processedPath,
+      r.status                 AS status,
+      ul.added_at              AS addedAt,
+      m.title                  AS title,
+      m.author                 AS author,
+      m.year                   AS year,
+      m.album                  AS album,
+      m.country                AS country,
+      m.cover_url              AS coverUrl,
+      COALESCE(pl.likes, 0)    AS likes,
+      COALESCE(pl.play_count, 0) AS "playCount
     FROM public.user_library ul
     JOIN public.restorations r
       ON r.id = ul.track_id
