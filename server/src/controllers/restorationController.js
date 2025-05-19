@@ -88,7 +88,7 @@ exports.uploadMetadata = async (req, res) => {
 
     if (!trackId) {
       return res.status(400).json({ error: 'trackId обязателен' });
-    }1
+    }
 
     let coverBase64 = null;
     if (coverUrl) {
