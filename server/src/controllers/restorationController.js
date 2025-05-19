@@ -93,19 +93,30 @@ exports.uploadMetadata = async (req, res) => {
 
     let coverBase64 = null;
     if (coverUrl) {
-      // Ожидаем Data URI: data:image/...;base64,XXXXX
-      const match = coverUrl.match(/^data:image\/\w+;base64,(.+)$/);
+      // Проверяем, что coverUrl — это валидный Data URI
+      const match = coverUrl.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!match) {
         return res.status(400).json({ error: 'Неверный формат coverUrl, ожидается data URI' });
       }
 
-      // Декодируем, конвертируем в PNG и снова кодируем в base64
-      const imgBuf = Buffer.from(match[1], 'base64');
-      const pngBuf = await sharp(imgBuf).png().toBuffer();
-      coverBase64 = `data:image/png;base64,${pngBuf.toString('base64')}`;
+      const mimeType = match[1]; // Например, 'image/jpeg' или 'image/png'
+      const base64Data = match[2]; // Сама строка base64
+
+      // Список допустимых форматов
+      const acceptableFormats = ['image/jpeg', 'image/png'];
+
+      if (acceptableFormats.includes(mimeType)) {
+        // Формат подходит, оставляем исходную строку
+        coverBase64 = coverUrl;
+      } else {
+        // Формат не подходит, декодируем и конвертируем в PNG
+        const imgBuf = Buffer.from(base64Data, 'base64');
+        const pngBuf = await sharp(imgBuf).png().toBuffer();
+        coverBase64 = `data:image/png;base64,${pngBuf.toString('base64')}`;
+      }
     }
 
-    // Вставляем все поля, cover_url теперь хранит Data URI с PNG
+    // Сохраняем данные в базу
     const insertMeta = `
       INSERT INTO public.restoration_metadata
         (restoration_id, title, author, year, album, country, cover_url)
