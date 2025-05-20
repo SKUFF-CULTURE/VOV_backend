@@ -6,9 +6,11 @@ IMAGE_NAME=sosalovo-container
 
 # Сборка Docker-образов через docker-compose
 build:
+	cd server && npm install && cd ..
 	docker compose build
 
 rebuild:
+	cd server && npm install && cd ..
 	docker compose build --no-cache
 
 # Запуск контейнеров через docker-compose
