@@ -8,12 +8,7 @@ COPY package*.json ./
 RUN npm install
 
 # Копируем локальные модели (предполагается, что на хосте есть ./models/)
-COPY node_modules/ ./node_modules/
-
-# Копируем остальной исходный код приложения, но без моделей
-COPY src/ ./src/
-# если есть другие директории — копируйте их явно:
-# COPY config/ ./config/
+COPY . .
 
 EXPOSE 5000
 
