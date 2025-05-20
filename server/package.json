@@ -5,7 +5,7 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
-        "dev": "npm install && nodemon server.js",
+        "dev": "nodemon server.js",
         "reindex": "node ./src/scripts/reindex.js",
         "reindex:cron": "node ./src/scripts/reindexCron.js"
     },
