@@ -91,7 +91,7 @@ exports.getLibrary = async (req, res) => {
       m.country                AS country,
       m.cover_url              AS coverUrl,
       COALESCE(pl.likes, 0)    AS likes,
-      COALESCE(pl.play_count, 0) AS "playCount
+      COALESCE(pl.play_count, 0) AS playCount
     FROM public.user_library ul
     JOIN public.restorations r
       ON r.id = ul.track_id
