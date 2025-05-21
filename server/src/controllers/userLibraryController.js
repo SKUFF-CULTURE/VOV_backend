@@ -1,5 +1,5 @@
-// controllers/userLibraryController.js
 const db = require('../config/db');
+const { getCached, invalidateCache, invalidateCacheByPrefix } = require('../utils/RedisCache');
 
 exports.addToLibrary = async (req, res) => {
   const { userId, trackId } = req.body;
@@ -8,7 +8,7 @@ exports.addToLibrary = async (req, res) => {
   }
 
   try {
-    // проверка существования пользователя
+    // Проверка существования пользователя
     const user = await db.query(
       'SELECT 1 FROM public.users WHERE id = $1',
       [userId]
@@ -17,7 +17,7 @@ exports.addToLibrary = async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // проверка существования трека
+    // Проверка существования трека
     const track = await db.query(
       'SELECT 1 FROM public.restorations WHERE id = $1',
       [trackId]
@@ -33,7 +33,7 @@ exports.addToLibrary = async (req, res) => {
        ON CONFLICT DO NOTHING
        RETURNING track_id`,
       [userId, trackId]
-    )
+    );
 
     // Если это первый раз — увеличиваем лайк (UPSERT в public_library)
     if (insertUserLib.rowCount > 0) {
@@ -45,6 +45,15 @@ exports.addToLibrary = async (req, res) => {
          RETURNING likes`,
         [trackId]
       );
+
+      // Инвалидация кэша
+      await Promise.all([
+        invalidateCache(`userLibrary:${userId}`),
+        invalidateCache(`publicTrack:${trackId}`),
+        invalidateCacheByPrefix('publicTracks:'),
+        invalidateCacheByPrefix('topByPlays:'),
+        invalidateCacheByPrefix('topByLikes:')
+      ]);
 
       return res.status(201).json({
         userId,
@@ -60,57 +69,67 @@ exports.addToLibrary = async (req, res) => {
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
+
 exports.getLibrary = async (req, res) => {
   const { userId } = req.body;
   if (!userId) {
     return res.status(400).json({ error: 'userId обязателен' });
   }
 
+  const cacheKey = `userLibrary:${userId}`;
   try {
-    // проверка существования пользователя
-    const user = await db.query(
-      'SELECT 1 FROM public.users WHERE id = $1',
-      [userId]
-    );
-    if (user.rowCount === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    const result = await getCached(cacheKey, async () => {
+      // Проверка существования пользователя
+      const user = await db.query(
+        'SELECT 1 FROM public.users WHERE id = $1',
+        [userId]
+      );
+      if (user.rowCount === 0) {
+        return { error: 'Пользователь не найден', status: 404 };
+      }
+
+      // Получаем все треки из библиотеки с метаданными
+      const { rows } = await db.query(
+        `SELECT
+          r.id                     AS trackId,
+          r.file_path_original     AS originalPath,
+          r.file_path_processed    AS processedPath,
+          r.status                 AS status,
+          ul.added_at              AS addedAt,
+          m.title                  AS title,
+          m.author                 AS author,
+          m.year                   AS year,
+          m.album                  AS album,
+          m.country                AS country,
+          m.cover_url              AS coverUrl,
+          COALESCE(pl.likes, 0)    AS likes,
+          COALESCE(pl.play_count, 0) AS playCount
+        FROM public.user_library ul
+        JOIN public.restorations r
+          ON r.id = ul.track_id
+        LEFT JOIN public.restoration_metadata m
+          ON r.id = m.restoration_id
+        LEFT JOIN public.public_library pl
+          ON r.id = pl.track_id
+        WHERE ul.user_id = $1
+        ORDER BY ul.added_at DESC`,
+        [userId]
+      );
+
+      return { tracks: rows };
+    }, 300); // 5 минут TTL
+
+    if (result.error) {
+      return res.status(result.status).json({ error: result.error });
     }
 
-    // получаем все треки из библиотеки с метаданными
-    const { rows } = await db.query(
-    `SELECT
-      r.id                     AS trackId,
-      r.file_path_original     AS originalPath,
-      r.file_path_processed    AS processedPath,
-      r.status                 AS status,
-      ul.added_at              AS addedAt,
-      m.title                  AS title,
-      m.author                 AS author,
-      m.year                   AS year,
-      m.album                  AS album,
-      m.country                AS country,
-      m.cover_url              AS coverUrl,
-      COALESCE(pl.likes, 0)    AS likes,
-      COALESCE(pl.play_count, 0) AS playCount
-    FROM public.user_library ul
-    JOIN public.restorations r
-      ON r.id = ul.track_id
-    LEFT JOIN public.restoration_metadata m
-      ON r.id = m.restoration_id
-    LEFT JOIN public.public_library pl
-      ON r.id = pl.track_id
-    WHERE ul.user_id = $1
-    ORDER BY ul.added_at DESC`,
-    [userId]
-  );
-
-
-    return res.status(200).json({ tracks: rows });
+    return res.status(200).json(result);
   } catch (err) {
     console.error('Ошибка getLibrary:', err);
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
+
 exports.removeFromLibrary = async (req, res) => {
   const { userId, trackId } = req.body;
   if (!userId || !trackId) {
@@ -118,7 +137,7 @@ exports.removeFromLibrary = async (req, res) => {
   }
 
   try {
-    // проверка существования пользователя
+    // Проверка существования пользователя
     const user = await db.query(
       'SELECT 1 FROM public.users WHERE id = $1',
       [userId]
@@ -127,7 +146,7 @@ exports.removeFromLibrary = async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // проверка существования трека
+    // Проверка существования трека
     const track = await db.query(
       'SELECT 1 FROM public.restorations WHERE id = $1',
       [trackId]
@@ -136,7 +155,7 @@ exports.removeFromLibrary = async (req, res) => {
       return res.status(404).json({ error: 'Трек не найден' });
     }
 
-    // удаляем из user_library
+    // Удаляем из user_library
     const deleteResult = await db.query(
       `DELETE FROM public.user_library
          WHERE user_id = $1 AND track_id = $2
@@ -145,7 +164,7 @@ exports.removeFromLibrary = async (req, res) => {
     );
 
     if (deleteResult.rowCount > 0) {
-      // уменьшаем лайки в public_library, но не ниже нуля
+      // Уменьшаем лайки в public_library, но не ниже нуля
       const updateLikes = await db.query(
         `UPDATE public.public_library
             SET likes = GREATEST(likes - 1, 0)
@@ -154,6 +173,15 @@ exports.removeFromLibrary = async (req, res) => {
         [trackId]
       );
 
+      // Инвалидация кэша
+      await Promise.all([
+        invalidateCache(`userLibrary:${userId}`),
+        invalidateCache(`publicTrack:${trackId}`),
+        invalidateCacheByPrefix('publicTracks:'),
+        invalidateCacheByPrefix('topByPlays:'),
+        invalidateCacheByPrefix('topByLikes:')
+      ]);
+
       return res.status(200).json({
         userId,
         trackId,
@@ -161,7 +189,7 @@ exports.removeFromLibrary = async (req, res) => {
       });
     }
 
-    // не было записи в user_library
+    // Не было записи в user_library
     return res.status(200).json({
       userId,
       trackId,
