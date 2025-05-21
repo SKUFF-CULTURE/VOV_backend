@@ -1,4 +1,3 @@
-//src/routes/searchRoutes.js
 const express = require('express');
 const es = require('../utils/esClient');
 const router = express.Router();
@@ -11,12 +10,13 @@ router.get('/', async (req, res, next) => {
 
     if (isNaN(fromNum) || fromNum < 0) throw new Error('Invalid "from" parameter');
     if (isNaN(sizeNum) || sizeNum < 1 || sizeNum > 100) throw new Error('Invalid "size" parameter');
+    if (q && q.length < 3) throw new Error('Search query must be at least 3 characters long'); // Регулируем длинну поискового запроса
 
     const must = q ? {
-      multi_match: {
-        query: q,
+      query_string: {
+        query: `*${q}*`,
         fields: ['title^3', 'author^2', 'album'],
-        fuzziness: 'AUTO',
+        default_operator: 'AND',
       },
     } : { match_all: {} };
 
