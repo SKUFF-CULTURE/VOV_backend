@@ -1,5 +1,9 @@
 const Redis = require('ioredis');
-const redis = new Redis({ host: 'redis', port: 6379 });
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'redis',
+  port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+  password: process.env.REDIS_PASSWORD // Пароль из переменной окружения
+});
 
 async function getCached(key, fetchFn, ttl = 300) {
   try {
