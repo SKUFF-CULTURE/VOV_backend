@@ -47,7 +47,7 @@ async function ensureIndex() {
               },
               year: { type: 'keyword' },
               country: { type: 'keyword' },
-              cover_url: { type: 'keyword' },
+              cover_url: { type: 'keyword', ignore_above: 100000 },
               is_public: { type: 'boolean' },
               user_ids: { type: 'keyword' },
             },
