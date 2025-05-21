@@ -44,20 +44,45 @@ async function reindexAll() {
     FROM public.restorations r
     JOIN public.restoration_metadata m ON m.restoration_id = r.id
   `);
-  console.log('Tracks retrieved:', tracks.length, tracks);
+  console.log('Tracks retrieved:', tracks.length, tracks.map(t => ({
+    id: t.id,
+    title: t.title,
+    cover_url: t.cover_url ? `${t.cover_url.slice(0, 50)}... (length: ${t.cover_url.length})` : null
+  })));
 
   const body = tracks.flatMap(t => [
     { index: { _index: 'tracks', _id: t.id.toString() } },
-    { ...t, id: t.id.toString(), is_public: true, user_ids: [] }
+    {
+      ...t,
+      id: t.id.toString(),
+      is_public: true,
+      user_ids: [],
+      cover_url: t.cover_url && typeof t.cover_url === 'string' ? t.cover_url : null
+    }
   ]);
-  console.log('Bulk body prepared:', body);
+  console.log('Bulk body prepared:', body.map(b => b.index ? b : {
+    id: b.id,
+    title: b.title,
+    cover_url: b.cover_url ? `${b.cover_url.slice(0, 50)}... (length: ${b.cover_url.length})` : null
+  }));
 
   if (body.length === 0) {
     console.log('No tracks to index, skipping bulk operation');
   } else {
     console.log('Performing bulk indexing...');
-    await es.bulk({ refresh: true, body });
-    console.log('Bulk indexing completed');
+    try {
+      const response = await es.bulk({ refresh: true, body });
+      if (response.errors) {
+        console.error('Bulk indexing errors:', response.items.filter(item => item.index?.error).map(item => ({
+          id: item.index._id,
+          error: item.index.error
+        })));
+      } else {
+        console.log('Bulk indexing completed');
+      }
+    } catch (err) {
+      console.error('Bulk indexing failed:', err.message, err.meta);
+    }
   }
 
   const { rows: libs } = await db.query(`
