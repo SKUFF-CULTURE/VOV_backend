@@ -2,7 +2,7 @@ const { Kafka } = require('kafkajs');
 
 const kafka = new Kafka({
   clientId: 'audio-upload-service',
-  brokers: [process.env.KAFKA_BROKER || 'localhost:9092'], // Адрес брокера из переменной окружения
+  brokers: [process.env.KAFKA_BROKER || 'kafka:9092'], // Адрес брокера из переменной окружения
 });
 
 const producer = kafka.producer();
