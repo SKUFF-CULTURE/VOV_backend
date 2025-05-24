@@ -1,9 +1,9 @@
 // controllers/restorationController.js
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 }  = require('uuid');
 const sharp           = require('sharp');
 const Minio           = require('minio');
 const db              = require('../config/db');
-
+const {producer}      = require('../services/kafka')
 const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || 'localhost',
   port:       +process.env.MINIO_PORT  || 9000,
@@ -36,11 +36,12 @@ function presignedGetAsync(bucket, objectName, expires = 3600) {
 
 // === 1. Загрузка аудиофайла ===
 exports.uploadAudio = async (req, res) => {
+  exports.uploadAudio = async (req, res) => {
   console.log('BODY (uploadAudio):', req.body);
   console.log('FILE (uploadAudio):', req.file);
 
   try {
-    const { file }   = req;
+    const { file } = req;
     const { userId } = req.body;
     if (!file || !userId) {
       return res.status(400).json({ error: 'file и userId обязательны' });
@@ -49,6 +50,7 @@ exports.uploadAudio = async (req, res) => {
     const id = uuidv4();
     const objectName = `${userId}/${id}-${file.originalname}`;
 
+    // Загрузка файла в S3 (MinIO)
     await putObjectAsync(
       BUCKET,
       objectName,
@@ -63,13 +65,33 @@ exports.uploadAudio = async (req, res) => {
       RETURNING id;
     `;
 
+    // Сохранение в PostgreSQL
     const { rows } = await db.query(insert, [id, userId, filePath]);
+
+    // Отправка сообщения в Kafka
+    await producer.send({
+      topic: 'audio-processing', // Имя топика
+      messages: [
+        {
+          value: JSON.stringify({
+            id: rows[0].id,
+            userId,
+            filePath,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            createdAt: new Date().toISOString(),
+          }),
+        },
+      ],
+    });
+    console.log(`Сообщение отправлено в Kafka для файла ${filePath}`);
+
     return res.status(200).json({ id: rows[0].id });
   } catch (e) {
     console.error('Ошибка uploadAudio:', e);
     return res.status(500).json({ error: 'Ошибка загрузки файла' });
   }
-  
+  }
 };
 
 // === 2. Сохранение метаданных ===
