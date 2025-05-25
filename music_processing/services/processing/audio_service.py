@@ -1,12 +1,11 @@
 # Microservice for music processing
 
 import logging
-import json
 import time
 from pathlib import Path
 from music_processing.source.toolbox.check_nfs import check_nfs_server
-from music_processing.kafka_tools import KafkaMessageConsumer, KafkaMessageProducer
-from music_processing.config import KAFKA_TOPICS, KAFKA_CONSUMER_GROUPS, ACTOR_GRACE_PERIOD, NFS_MOUNT_POINT
+from kafka_tools import KafkaMessageConsumer, KafkaMessageProducer
+from config import KAFKA_TOPICS, KAFKA_CONSUMER_GROUPS, ACTOR_GRACE_PERIOD, NFS_MOUNT_POINT
 
 NAME = "SERVICE_AUDIO"
 

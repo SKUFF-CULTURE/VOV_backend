@@ -181,6 +181,17 @@ services:
   #   networks:
   #     - kafka-network
   #   restart: unless-stopped
+  service_ping:
+    build:
+      context: .
+      dockerfile: Dockerfile.service_ping
+    restart: always # Перезапускаемся пока идет конфигурация кафки
+    environment:
+      - KAFKA_BROKER=kafka:9092  # Адрес Kafka внутри Docker-сети
+    depends_on:
+      - kafka  # Убедитесь, что Kafka доступна перед запуском
+    networks:
+      - kafka-network
 
 networks:
   kafka-network:
