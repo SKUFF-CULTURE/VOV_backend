@@ -30,6 +30,7 @@ exports.addPublicTrack = async (req, res) => {
 };
 exports.addComplaint = async (req, res) => {
   const { userId, trackId } = req.body;
+  console.log('req.body:', req.body);
 
   // Проверяем, что оба параметра переданы
   if (!userId || !trackId) {
@@ -37,13 +38,13 @@ exports.addComplaint = async (req, res) => {
   }
 
   try {
-    // Проверяем, не жаловался ли юзер на этот трек
-    const existingComplaint = await db.query(
-      'SELECT 1 FROM public.complaints WHERE user_id = $1 AND track_id = $2',
-      [userId, trackId]
+    // Проверяем существование юзера
+    const user = await db.query(
+      'SELECT id FROM public.users WHERE id = $1',
+      [userId]
     );
-    if (existingComplaint.rowCount > 0) {
-      return res.status(400).json({ error: 'Вы уже пожаловались на этот трек' });
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
     // Проверяем существование трека
@@ -55,16 +56,16 @@ exports.addComplaint = async (req, res) => {
       return res.status(404).json({ error: 'Трек не найден' });
     }
 
-    // Проверяем существование юзера
-    const user = await db.query(
-      'SELECT id FROM public.users WHERE id = $1',
-      [userId]
+    // Проверяем, не жаловался ли юзер
+    const existingComplaint = await db.query(
+      'SELECT 1 FROM public.complaints WHERE user_id = $1 AND track_id = $2',
+      [userId, trackId]
     );
-    if (user.rowCount === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    if (existingComplaint.rowCount > 0) {
+      return res.status(400).json({ error: 'Вы уже пожаловались на этот трек' });
     }
 
-    // Добавляем жалобу в таблицу complaints
+    // Добавляем жалобу
     await db.query(
       'INSERT INTO public.complaints (user_id, track_id) VALUES ($1, $2)',
       [userId, trackId]
