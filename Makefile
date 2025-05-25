@@ -39,6 +39,9 @@ kafka-logs:
 db:
 	docker compose exec db psql -U postgres -d vov
 
+mistral:
+	docker compose exec service_ollama ollama pull mistral
+
 # Удаление бд 
 # db delete:
 # 	docker compose stop db

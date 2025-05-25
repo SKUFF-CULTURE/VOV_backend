@@ -35,7 +35,12 @@ make build
 ```bash
 make run
 ```
-### 5️⃣ Остановка контейнеров
+### 5️⃣ Установите LLM mistral для Ollama
+```bash
+make mistral
+```
+
+### 6️⃣ Остановка контейнеров
 ```bash
 make stop
 ```
