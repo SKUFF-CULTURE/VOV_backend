@@ -196,5 +196,5 @@ volumes:
   kafka-data:
   esdata:
     driver: local
-
+  zookeeper-data:
 
