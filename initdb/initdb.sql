@@ -25,6 +25,37 @@ CREATE TABLE IF NOT EXISTS public.restorations (
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE public.restorations
+  ADD COLUMN IF NOT EXISTS complaint_count INTEGER NOT NULL DEFAULT 0;
+
+-- Триггер на обновление complaint_count
+
+CREATE TABLE IF NOT EXISTS public.complaints (
+  client_ip  TEXT       NOT NULL,
+  track_id   UUID       NOT NULL
+    REFERENCES public.restorations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (client_ip, track_id)
+);
+
+-- Создаём функцию для автоматического удаления трека
+CREATE OR REPLACE FUNCTION public.delete_track_on_complaint_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.complaint_count >= 10 THEN
+    DELETE FROM public.restorations WHERE id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Создаём триггер
+DROP TRIGGER IF EXISTS trg_delete_on_complaint_limit ON public.restorations;
+CREATE TRIGGER trg_delete_on_complaint_limit
+  AFTER UPDATE OF complaint_count ON public.restorations
+  FOR EACH ROW
+  WHEN (NEW.complaint_count >= 10)
+  EXECUTE FUNCTION public.delete_track_on_complaint_limit();
 
 -- === 4. Общая функция для updated_at-триггеров ===
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()

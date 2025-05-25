@@ -15,5 +15,6 @@ router.get('/top-plays', getTopByPlays);
 router.get('/top-likes', getTopByLikes);
 router.get('/:trackId', getPublicTrackById);
 router.delete('/:trackId', deletePublicTrack);
+router.post('/complaints', complaintsController.addComplaint);
 module.exports = router;
 

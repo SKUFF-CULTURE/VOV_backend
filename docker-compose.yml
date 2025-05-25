@@ -161,30 +161,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  hasura-migrations:
-    image: hasura/graphql-engine:v2.40.0.cli-migrations
-    volumes:
-      - ./hasura:/hasura
-    depends_on:
-      hasura:
-        condition: service_healthy
-    env_file:
-      - hasura.env
-    command: >
-      bash -c "
-        until curl -s http://hasura:8080/healthz | grep -q 'OK'; do
-          sleep 2
-        done &&
-        if [ ! -f /hasura/config.yaml ]; then
-          hasura init --endpoint http://hasura:8080 --admin-secret $${HASURA_GRAPHQL_ADMIN_SECRET} --project /hasura
-        fi &&
-        hasura --project /hasura migrate apply --all &&
-        hasura --project /hasura metadata apply &&
-        hasura --project /hasura metadata export &&
-        echo 'Migrations and metadata applied and exported!'
-      "
-    networks:
-      - kafka-network
+  # В задницу.
+  # hasura-migrations:
+  #   image: hasura/graphql-engine:v2.40.0.cli-migrations
+  #   volumes:
+  #     - ./hasura:/hasura
+  #   depends_on:
+  #     hasura:
+  #       condition: service_healthy
+  #   env_file:
+  #     - hasura.env
+  #   command: >
+  #     bash -c "
+  #       until curl -s http://hasura:8080/healthz | grep -q 'OK'; do
+  #         sleep 2
+  #       done &&
+  #       if [ ! -f /hasura/config.yaml ]; then
+  #         hasura init --endpoint http://hasura:8080 --admin-secret $${HASURA_GRAPHQL_ADMIN_SECRET} --project /hasura
+  #       fi &&
+  #       hasura --project /hasura migrate apply --all &&
+  #       hasura --project /hasura metadata apply &&
+  #       hasura --project /hasura metadata export &&
+  #       echo 'Migrations and metadata applied and exported!'
+  #     "
+  #   networks:
+  #     - kafka-network
   s3-minio:
     build:
       context: .
