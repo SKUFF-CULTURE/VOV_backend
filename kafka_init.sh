@@ -5,7 +5,11 @@ KAFKA_BROKER="${KAFKA_BROKER:-kafka:9092}"
 
 # Список топиков для создания
 TOPICS=(
-  "app.gnida.changeme"
+  "app.main.nettools"
+  "app.main.audio_raw"
+  "app.main.audio_buffed"
+  "app.main.audio_recognised"
+  "app.main.audio_processed"
 )
 
 # Проверяем подключение к Kafka

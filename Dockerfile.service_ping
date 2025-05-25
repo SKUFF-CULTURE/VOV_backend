@@ -1,0 +1,39 @@
+# Используем базовый образ Ubuntu
+FROM ubuntu:latest
+
+RUN apt-get update && apt-get install -y software-properties-common || apt-get update --fix-missing
+
+# Добавляем репозиторий для Python 3.12
+RUN add-apt-repository ppa:deadsnakes/ppa
+
+# Устанавливаем Python 3.12 и необходимые инструменты
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv \
+    curl || apt-get update --fix-missing
+
+# Создаем и активируем виртуальное окружение
+RUN python3 --version
+RUN python3.12 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+# Обновляем pip и setuptools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Копируем requirements.txt
+COPY music_processing/services/ping/ping_requirements.txt /requirements.txt
+
+# Устанавливаем зависимости
+RUN pip install --no-cache-dir -r /requirements.txt --ignore-installed
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем только необходимые файлы для actor_ping
+COPY kafka_tools.py /app/
+COPY config.py /app/
+COPY music_processing/services/ping/ping_service.py /app/
+
+# Запускаем актора
+CMD ["python3", "ping_service.py"]

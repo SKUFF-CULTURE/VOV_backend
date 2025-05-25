@@ -3,8 +3,8 @@
 import logging
 import json
 import time
-from music_processing.kafka_tools import KafkaMessageConsumer
-from music_processing.config import KAFKA_TOPICS, KAFKA_CONSUMER_GROUPS, ACTOR_GRACE_PERIOD
+from kafka_tools import KafkaMessageConsumer
+from config import KAFKA_TOPICS, KAFKA_CONSUMER_GROUPS, ACTOR_GRACE_PERIOD
 
 NAME = "SERVICE_PING"
 
