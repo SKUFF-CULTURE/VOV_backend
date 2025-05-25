@@ -29,22 +29,21 @@ exports.addPublicTrack = async (req, res) => {
   }
 };
 exports.addComplaint = async (req, res) => {
-  const { trackId } = req.body;
-  const clientIp = req.ip; // Получаем IP-адрес клиента
+  const { userId, trackId } = req.body;
 
-  // Проверяем, что trackId передан
-  if (!trackId) {
-    return res.status(400).json({ error: 'trackId обязателен' });
+  // Проверяем, что оба параметра переданы
+  if (!userId || !trackId) {
+    return res.status(400).json({ error: 'userId и trackId обязательны' });
   }
 
   try {
-    // Проверяем, не отправлял ли клиент с этого IP жалобу на этот трек
+    // Проверяем, не жаловался ли юзер на этот трек
     const existingComplaint = await db.query(
-      'SELECT 1 FROM public.complaints WHERE client_ip = $1 AND track_id = $2',
-      [clientIp, trackId]
+      'SELECT 1 FROM public.complaints WHERE user_id = $1 AND track_id = $2',
+      [userId, trackId]
     );
     if (existingComplaint.rowCount > 0) {
-      return res.status(400).json({ error: 'Жалоба с этого IP уже отправлена на этот трек' });
+      return res.status(400).json({ error: 'Вы уже пожаловались на этот трек' });
     }
 
     // Проверяем существование трека
@@ -56,24 +55,30 @@ exports.addComplaint = async (req, res) => {
       return res.status(404).json({ error: 'Трек не найден' });
     }
 
-    // Добавляем запись о жалобе в таблицу complaints
+    // Проверяем существование юзера
+    const user = await db.query(
+      'SELECT id FROM public.users WHERE id = $1',
+      [userId]
+    );
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Добавляем жалобу в таблицу complaints
     await db.query(
-      'INSERT INTO public.complaints (client_ip, track_id) VALUES ($1, $2)',
-      [clientIp, trackId]
+      'INSERT INTO public.complaints (user_id, track_id) VALUES ($1, $2)',
+      [userId, trackId]
     );
 
-    // Увеличиваем счётчик жалоб в таблице restorations
+    // Увеличиваем счётчик жалоб
     const updatedTrack = await db.query(
-      `UPDATE public.restorations 
-       SET complaint_count = complaint_count + 1 
-       WHERE id = $1 
-       RETURNING complaint_count`,
+      'UPDATE public.restorations SET complaint_count = complaint_count + 1 WHERE id = $1 RETURNING complaint_count',
       [trackId]
     );
 
     const newComplaintCount = updatedTrack.rows[0].complaint_count;
 
-    // Инвалидируем кэши, связанные с треком
+    // Инвалидируем кэши
     await Promise.all([
       invalidateCache(`publicTrack:${trackId}`),
       invalidateCacheByPrefix('publicTracks:'),
@@ -81,18 +86,16 @@ exports.addComplaint = async (req, res) => {
       invalidateCacheByPrefix('topByLikes:')
     ]);
 
-    // Логируем жалобу
-    console.log(`Жалоба на трек ${trackId} зарегистрирована с IP ${clientIp}`);
+    console.log(`Жалоба на трек ${trackId} от юзера ${userId}`);
 
-    // Если счётчик достиг 10, трек уже удалён триггером
     if (newComplaintCount >= 10) {
       return res.status(200).json({ message: 'Трек удалён из-за превышения лимита жалоб' });
     }
 
-    return res.status(200).json({ 
-      trackId, 
+    return res.status(200).json({
+      trackId,
       complaintCount: newComplaintCount,
-      message: 'Жалоба зарегистрирована' 
+      message: 'Жалоба зарегистрирована'
     });
   } catch (err) {
     console.error('Ошибка addComplaint:', err);
