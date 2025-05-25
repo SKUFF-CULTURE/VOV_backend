@@ -27,7 +27,9 @@
         "@elastic/elasticsearch":  "9.0.1",
         "node-cron": "4.0.5",
         "ioredis": "5.6.1",
-        "kafkajs": "2.2.4"
+        "kafkajs": "2.2.4", 
+        "fs": "0.0.1-security",
+        "path": "0.12.7"
     },
     "devDependencies": {
         "nodemon": "^3.1.10"

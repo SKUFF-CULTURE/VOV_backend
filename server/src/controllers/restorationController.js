@@ -3,6 +3,8 @@ const sharp = require('sharp');
 const Minio = require('minio');
 const db = require('../config/db');
 const { producer } = require('../services/kafka');
+const fs = require('fs').promises;
+const path = require('path');
 
 const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -13,7 +15,7 @@ const minioClient = new Minio.Client({
 });
 
 const BUCKET = process.env.MINIO_BUCKET || 'original';
-
+const NFS_PATH = '/mnt/nfs_share';
 // Промисификация putObject
 function putObjectAsync(bucket, objectName, buffer, metaData) {
   return new Promise((resolve, reject) => {
@@ -52,9 +54,19 @@ exports.uploadAudio = async (req, res) => {
 
     const id = uuidv4();
     const objectName = `${userId}/${id}-${file.originalname}`;
-    console.log(`📤 [uploadAudio] Попытка загрузки в S3: ${objectName}`);
+    const nfsFilePath = path.join(NFS_PATH, userId, `${id}-${file.originalname}`);
 
-    // Загрузка файла в S3 (MinIO)
+    // Создаём папку в NFS, если не существует
+    console.log(`📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId)}`);
+    await fs.mkdir(path.join(NFS_PATH, userId), { recursive: true });
+
+    // Сохраняем файл в NFS
+    console.log(`📤 [uploadAudio] Сохранение в NFS: ${nfsFilePath}`);
+    await fs.writeFile(nfsFilePath, file.buffer);
+    console.log(`✅ [uploadAudio] Файл сохранён в NFS: ${nfsFilePath}`);
+
+    // Сохраняем файл в MinIO
+    console.log(`📤 [uploadAudio] Попытка загрузки в MinIO: ${objectName}`);
     try {
       await putObjectAsync(
         BUCKET,
@@ -62,24 +74,24 @@ exports.uploadAudio = async (req, res) => {
         file.buffer,
         { 'Content-Type': file.mimetype }
       );
-      console.log(`✅ [uploadAudio] Файл успешно загружен в S3: ${objectName}`);
+      console.log(`✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`);
     } catch (minioError) {
       console.error('❌ [uploadAudio] Ошибка MinIO:', minioError);
       throw minioError;
     }
 
-    const filePath = `${BUCKET}/${objectName}`;
+    const minioFilePath = `${BUCKET}/${objectName}`;
     const insert = `
       INSERT INTO public.restorations (id, user_id, file_path_original, status)
       VALUES ($1, $2, $3, 'uploaded')
       RETURNING id;
     `;
 
-    // Сохранение в PostgreSQL
-    console.log('📝 [uploadAudio] Попытка записи в PostgreSQL:', { id, userId, filePath });
+    // Сохранение в PostgreSQL (путь до NFS)
+    console.log('📝 [uploadAudio] Попытка записи в PostgreSQL:', { id, userId, filePath: nfsFilePath });
     let rows;
     try {
-      const result = await db.query(insert, [id, userId, filePath]);
+      const result = await db.query(insert, [id, userId, nfsFilePath]);
       rows = result.rows;
       console.log(`✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${rows[0].id}`);
     } catch (dbError) {
@@ -91,7 +103,7 @@ exports.uploadAudio = async (req, res) => {
     const message = {
       id: rows[0].id,
       userId,
-      filePath,
+      filePath: nfsFilePath, // Путь до NFS
       originalName: file.originalname,
       mimeType: file.mimetype,
       createdAt: new Date().toISOString(),
@@ -99,7 +111,7 @@ exports.uploadAudio = async (req, res) => {
     console.log('📤 [uploadAudio] Попытка отправки в Kafka:', message);
     try {
       await producer.send({
-        topic: 'audio-processing',
+        topic: 'app.main.audio_raw',
         messages: [{ value: JSON.stringify(message) }],
       });
       console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka:`, message);
@@ -108,7 +120,7 @@ exports.uploadAudio = async (req, res) => {
       throw kafkaError;
     }
 
-    return res.status(200).json({ id: rows[0].id });
+    return res.status(200).json({ id: rows[0].id, filePath: nfsFilePath });
   } catch (e) {
     console.error('❌ [uploadAudio] Общая ошибка:', e);
     return res.status(500).json({ error: 'Ошибка загрузки файла', details: e.message });

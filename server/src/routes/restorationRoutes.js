@@ -2,6 +2,7 @@
 const express = require('express');
 const multer = require('multer');
 const ctrl = require('../controllers/restorationController');
+const {producer} = require('../services/kafka')
 
 const router = express.Router();
 // храним файл в памяти, чтобы сразу передать его в MinIO
@@ -17,7 +18,25 @@ router.post('/upload',   upload.single('file'), ctrl.uploadAudio);
 router.post('/metadata', express.json(),        ctrl.uploadMetadata);
 // Стриминг (для плеера)
 router.get('/stream/:trackId', ctrl.streamTrack);
-
+router.post('/ping', async (req, res) => {
+  try {
+    const clientIp = req.ip || 'unknown';
+    const message = {
+      event: 'ping',
+      client_ip: clientIp,
+      timestamp: new Date().toISOString(),
+    };
+    await producer.send({
+      topic: 'app.main.nettools',
+      messages: [{ value: JSON.stringify(message) }],
+    });
+    console.log(`🚀 [Ping] Отправлено в Kafka:`, message);
+    return res.status(200).json({ message: 'Ping sent' });
+  } catch (e) {
+    console.error('❌ [Ping] Ошибка:', e);
+    return res.status(500).json({ error: 'Ошибка отправки ping' });
+  }
+});
 // Скачивание (attachment)
 router.get('/download/:trackId', ctrl.downloadTrack);
 
