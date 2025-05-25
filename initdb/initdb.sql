@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   name       VARCHAR(100),
   email      VARCHAR(100) UNIQUE,
   google_id  VARCHAR(255),
-  role       VARCHAR(20) DEFAULT 'user'
+  role       VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'banned'))
 );
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
@@ -98,3 +98,7 @@ FROM
 ALTER TABLE public.public_library
   ADD COLUMN IF NOT EXISTS likes       INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS play_count  INTEGER NOT NULL DEFAULT 0;
+
+CREATE INDEX idx_restorations_user_id ON public.restorations(user_id);
+CREATE INDEX idx_user_library_user_id ON public.user_library(user_id);
+CREATE INDEX idx_user_library_track_id ON public.user_library(track_id);
