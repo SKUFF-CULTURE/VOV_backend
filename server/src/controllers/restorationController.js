@@ -91,7 +91,7 @@ exports.uploadAudio = async (req, res) => {
     console.log('📝 [uploadAudio] Попытка записи в PostgreSQL:', { id, userId, filePath: nfsFilePath });
     let rows;
     try {
-      const result = await db.query(insert, [id, userId, nfsFilePath]);
+      const result = await db.query(insert, [id, userId, minioFilePath]);
       rows = result.rows;
       console.log(`✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${rows[0].id}`);
     } catch (dbError) {

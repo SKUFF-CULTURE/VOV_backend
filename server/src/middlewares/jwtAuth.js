@@ -25,6 +25,10 @@ module.exports = function jwtAuth(req, res, next) {
     if (err) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+    const userRole = decoded['https://hasura.io/jwt/claims']?.['x-hasura-default-role'] || decoded.role;
+    if (userRole === 'banned') {
+      return res.status(403).json({ error: 'Access denied: User is banned' });
+    }
     req.user = decoded;
     next();
   });

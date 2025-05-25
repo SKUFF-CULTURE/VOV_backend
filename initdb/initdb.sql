@@ -6,10 +6,13 @@ CREATE TABLE IF NOT EXISTS public.users (
   id         SERIAL PRIMARY KEY,
   name       VARCHAR(100),
   email      VARCHAR(100) UNIQUE,
-  google_id  VARCHAR(255)
+  google_id  VARCHAR(255),
+  role       VARCHAR(20) DEFAULT 'user'
 );
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+  
+
 
 -- === 3. Таблица restorations ===
 CREATE TABLE IF NOT EXISTS public.restorations (

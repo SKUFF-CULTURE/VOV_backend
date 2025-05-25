@@ -143,7 +143,24 @@ services:
       - kafka-network
     restart: unless-stopped
     
-
+  hasura:
+    image: hasura/graphql-engine:v2.40.0
+    container_name: hasura
+    ports:
+      - "8080:8080" # Порт прокинут: 8080 на хосте → 8080 в контейнере
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - hasura.env
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   s3-minio:
     build:
       context: .
@@ -192,23 +209,25 @@ services:
       - kafka  # Убедитесь, что Kafka доступна перед запуском
     networks:
       - kafka-network
+  
 
-  service_ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - kafka-network
-
+  # service_ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  
+  #   networks:
+  #     - kafka-network
+  
 networks:
   kafka-network:
     driver: bridge

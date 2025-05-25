@@ -7,10 +7,27 @@ const authController = require('../controllers/authController');
 const jwtAuth  = require('../middlewares/jwtAuth');
 
 function issueTokenAndRedirect(req, res) {
-  // берем из req.user, что положила стратегия Passport
   const { id, email, role, name, avatar_url } = req.user;
+  if (role === 'banned') {
+    return res.redirect('http://localhost:3000/banned');
+  }
 
-  const payload = { id, email, role, name, avatar_url };
+  const payload = {
+    'https://hasura.io/jwt/claims': {
+      'x-hasura-allowed-roles': [role, 'user'], // Включаем текущую роль и 'user' как запасную
+      'x-hasura-default-role': role || 'user',  // По умолчанию используем роль из БД или 'user'
+      'x-hasura-user-id': id.toString(),        // ID пользователя как строка
+      'x-hasura-email': email,
+      'x-hasura-name': name,
+      'x-hasura-avatar-url': avatar_url
+    },
+    id,
+    email,
+    role,
+    name,
+    avatar_url
+  };
+
   const token = jwt.sign(
     payload,
     process.env.JWT_SECRET || 'default_jwt_secret',
