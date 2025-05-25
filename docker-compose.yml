@@ -193,6 +193,22 @@ services:
     networks:
       - kafka-network
 
+  service_ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kafka-network
+
 networks:
   kafka-network:
     driver: bridge
@@ -202,6 +218,7 @@ networks:
 
 volumes:
   db-data:
+  ollama_data:
   nfs-data:
   minio-data:
   kafka-data:
