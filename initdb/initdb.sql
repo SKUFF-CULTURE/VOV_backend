@@ -30,12 +30,14 @@ ALTER TABLE public.restorations
 
 -- Триггер на обновление complaint_count
 
+DROP TABLE IF EXISTS public.complaints;
 CREATE TABLE IF NOT EXISTS public.complaints (
-  client_ip  TEXT       NOT NULL,
+  user_id    INTEGER    NOT NULL
+    REFERENCES public.users(id) ON DELETE CASCADE,
   track_id   UUID       NOT NULL
     REFERENCES public.restorations(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (client_ip, track_id)
+  PRIMARY KEY (user_id, track_id)
 );
 
 -- Создаём функцию для автоматического удаления трека
