@@ -28,9 +28,6 @@ exports.addPublicTrack = async (req, res) => {
     return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
-const db = require('../config/db');
-const { invalidateCache, invalidateCacheByPrefix } = require('../utils/RedisCache');
-
 exports.addComplaint = async (req, res) => {
   const { trackId } = req.body;
   const clientIp = req.ip; // Получаем IP-адрес клиента

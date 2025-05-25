@@ -6,7 +6,8 @@ const {
   getPublicTrackById,
   deletePublicTrack,
   getTopByPlays,
-  getTopByLikes
+  getTopByLikes,
+  addComplaint
 } = require('../controllers/publicLibraryController');
 
 router.post('/', addPublicTrack);
@@ -15,6 +16,6 @@ router.get('/top-plays', getTopByPlays);
 router.get('/top-likes', getTopByLikes);
 router.get('/:trackId', getPublicTrackById);
 router.delete('/:trackId', deletePublicTrack);
-router.post('/complaints', complaintsController.addComplaint);
+router.post('/complaints', addComplaint);
 module.exports = router;
 
