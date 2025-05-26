@@ -1,29 +1,32 @@
-const db = require('../config/db');
-const { getCached, invalidateCache, invalidateCacheByPrefix } = require('../utils/RedisCache');
+const db = require("../config/db");
+const {
+  getCached,
+  invalidateCache,
+  invalidateCacheByPrefix,
+} = require("../utils/RedisCache");
 
 exports.addToLibrary = async (req, res) => {
   const { userId, trackId } = req.body;
   if (!userId || !trackId) {
-    return res.status(400).json({ error: 'userId и trackId обязательны' });
+    return res.status(400).json({ error: "userId и trackId обязательны" });
   }
 
   try {
     // Проверка существования пользователя
-    const user = await db.query(
-      'SELECT 1 FROM public.users WHERE id = $1',
-      [userId]
-    );
+    const user = await db.query("SELECT 1 FROM public.users WHERE id = $1", [
+      userId,
+    ]);
     if (user.rowCount === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+      return res.status(404).json({ error: "Пользователь не найден" });
     }
 
     // Проверка существования трека
     const track = await db.query(
-      'SELECT 1 FROM public.restorations WHERE id = $1',
+      "SELECT 1 FROM public.restorations WHERE id = $1",
       [trackId]
     );
     if (track.rowCount === 0) {
-      return res.status(404).json({ error: 'Трек не найден' });
+      return res.status(404).json({ error: "Трек не найден" });
     }
 
     // Вставка в user_library (игнорируем дубли)
@@ -50,47 +53,51 @@ exports.addToLibrary = async (req, res) => {
       await Promise.all([
         invalidateCache(`userLibrary:${userId}`),
         invalidateCache(`publicTrack:${trackId}`),
-        invalidateCacheByPrefix('publicTracks:'),
-        invalidateCacheByPrefix('topByPlays:'),
-        invalidateCacheByPrefix('topByLikes:')
+        invalidateCacheByPrefix("publicTracks:"),
+        invalidateCacheByPrefix("topByPlays:"),
+        invalidateCacheByPrefix("topByLikes:"),
       ]);
 
       return res.status(201).json({
         userId,
         trackId,
-        likes: upsertLike.rows[0].likes
+        likes: upsertLike.rows[0].likes,
       });
     }
 
     // Уже в user_library — ничего не делаем с лайками
-    return res.status(200).json({ userId, trackId, message: 'Уже в библиотеке' });
+    return res
+      .status(200)
+      .json({ userId, trackId, message: "Уже в библиотеке" });
   } catch (err) {
-    console.error('Ошибка addToLibrary:', err);
-    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    console.error("Ошибка addToLibrary:", err);
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
 exports.getLibrary = async (req, res) => {
   const { userId } = req.body;
   if (!userId) {
-    return res.status(400).json({ error: 'userId обязателен' });
+    return res.status(400).json({ error: "userId обязателен" });
   }
 
   const cacheKey = `userLibrary:${userId}`;
   try {
-    const result = await getCached(cacheKey, async () => {
-      // Проверка существования пользователя
-      const user = await db.query(
-        'SELECT 1 FROM public.users WHERE id = $1',
-        [userId]
-      );
-      if (user.rowCount === 0) {
-        return { error: 'Пользователь не найден', status: 404 };
-      }
+    const result = await getCached(
+      cacheKey,
+      async () => {
+        // Проверка существования пользователя
+        const user = await db.query(
+          "SELECT 1 FROM public.users WHERE id = $1",
+          [userId]
+        );
+        if (user.rowCount === 0) {
+          return { error: "Пользователь не найден", status: 404 };
+        }
 
-      // Получаем все треки из библиотеки с метаданными
-      const { rows } = await db.query(
-        `SELECT
+        // Получаем все треки из библиотеки с метаданными
+        const { rows } = await db.query(
+          `SELECT
           r.id                     AS trackId,
           r.file_path_original     AS originalPath,
           r.file_path_processed    AS processedPath,
@@ -113,11 +120,13 @@ exports.getLibrary = async (req, res) => {
           ON r.id = pl.track_id
         WHERE ul.user_id = $1
         ORDER BY ul.added_at DESC`,
-        [userId]
-      );
+          [userId]
+        );
 
-      return { tracks: rows };
-    }, 300); // 5 минут TTL
+        return { tracks: rows };
+      },
+      300
+    ); // 5 минут TTL
 
     if (result.error) {
       return res.status(result.status).json({ error: result.error });
@@ -125,34 +134,33 @@ exports.getLibrary = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (err) {
-    console.error('Ошибка getLibrary:', err);
-    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    console.error("Ошибка getLibrary:", err);
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
 exports.removeFromLibrary = async (req, res) => {
   const { userId, trackId } = req.body;
   if (!userId || !trackId) {
-    return res.status(400).json({ error: 'userId и trackId обязательны' });
+    return res.status(400).json({ error: "userId и trackId обязательны" });
   }
 
   try {
     // Проверка существования пользователя
-    const user = await db.query(
-      'SELECT 1 FROM public.users WHERE id = $1',
-      [userId]
-    );
+    const user = await db.query("SELECT 1 FROM public.users WHERE id = $1", [
+      userId,
+    ]);
     if (user.rowCount === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+      return res.status(404).json({ error: "Пользователь не найден" });
     }
 
     // Проверка существования трека
     const track = await db.query(
-      'SELECT 1 FROM public.restorations WHERE id = $1',
+      "SELECT 1 FROM public.restorations WHERE id = $1",
       [trackId]
     );
     if (track.rowCount === 0) {
-      return res.status(404).json({ error: 'Трек не найден' });
+      return res.status(404).json({ error: "Трек не найден" });
     }
 
     // Удаляем из user_library
@@ -177,15 +185,15 @@ exports.removeFromLibrary = async (req, res) => {
       await Promise.all([
         invalidateCache(`userLibrary:${userId}`),
         invalidateCache(`publicTrack:${trackId}`),
-        invalidateCacheByPrefix('publicTracks:'),
-        invalidateCacheByPrefix('topByPlays:'),
-        invalidateCacheByPrefix('topByLikes:')
+        invalidateCacheByPrefix("publicTracks:"),
+        invalidateCacheByPrefix("topByPlays:"),
+        invalidateCacheByPrefix("topByLikes:"),
       ]);
 
       return res.status(200).json({
         userId,
         trackId,
-        likes: updateLikes.rows[0].likes
+        likes: updateLikes.rows[0].likes,
       });
     }
 
@@ -193,10 +201,10 @@ exports.removeFromLibrary = async (req, res) => {
     return res.status(200).json({
       userId,
       trackId,
-      message: 'Трек не был в библиотеке'
+      message: "Трек не был в библиотеке",
     });
   } catch (err) {
-    console.error('Ошибка removeFromLibrary:', err);
-    return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    console.error("Ошибка removeFromLibrary:", err);
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

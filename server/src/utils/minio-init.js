@@ -1,12 +1,12 @@
 // src/minio-init.js
-const Minio = require('minio');
+const Minio = require("minio");
 
 const minioClient = new Minio.Client({
-  endPoint:   process.env.MINIO_ENDPOINT || 'localhost',
-  port:       +process.env.MINIO_PORT  || 9000,
-  useSSL:     process.env.MINIO_USE_SSL === 'true',
-  accessKey:  process.env.MINIO_ACCESS_KEY,
-  secretKey:  process.env.MINIO_SECRET_KEY,
+  endPoint: process.env.MINIO_ENDPOINT || "localhost",
+  port: +process.env.MINIO_PORT || 9000,
+  useSSL: process.env.MINIO_USE_SSL === "true",
+  accessKey: process.env.MINIO_ACCESS_KEY,
+  secretKey: process.env.MINIO_SECRET_KEY,
 });
 
 /**
@@ -22,7 +22,7 @@ async function ensureBucket(bucketName) {
         return resolve();
       }
       // создаём бакет в регионе us-east-1 (можно вынести в конфиг)
-      minioClient.makeBucket(bucketName, 'us-east-1', err => {
+      minioClient.makeBucket(bucketName, "us-east-1", (err) => {
         if (err) return reject(err);
         console.log(`Bucket "${bucketName}" created`);
         resolve();
@@ -36,8 +36,8 @@ async function ensureBucket(bucketName) {
  */
 async function initBuckets() {
   const buckets = [
-    process.env.MINIO_ORIGINAL_BUCKET  || 'original',
-    process.env.MINIO_PROCESSED_BUCKET || 'processed'
+    process.env.MINIO_ORIGINAL_BUCKET || "original",
+    process.env.MINIO_PROCESSED_BUCKET || "processed",
   ];
   for (const name of buckets) {
     try {

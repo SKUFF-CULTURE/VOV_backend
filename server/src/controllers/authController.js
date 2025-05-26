@@ -6,5 +6,7 @@ exports.profile = (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  res.json({ message: 'Logged out successfully (remove token on client side)' });
+  res.json({
+    message: "Logged out successfully (remove token on client side)",
+  });
 };
