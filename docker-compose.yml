@@ -85,6 +85,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  frontend:
+    build:
+      context: ./VOV_web
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    environment:
+      - VITE_API_URL=/api/ # Для Axios, чтобы запросы шли через Nginx
+    networks:
+      - kafka-network
+    restart: unless-stopped
 
   server:
     build: ./server
@@ -194,12 +204,12 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - frontend
-      - backend
+      - server 
     container_name: nginx
   s3-minio:
     build:
