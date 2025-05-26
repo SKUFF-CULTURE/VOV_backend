@@ -2,3 +2,5 @@
 server_config.env
 postgres.env
 s3-minio.env
+hasura.env
+redis.env

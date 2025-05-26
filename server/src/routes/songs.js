@@ -2,11 +2,11 @@
 // src/routes/songs.js
 // API-маршрут для добавления и получения треков
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 // Вставка или обновление одного трека посредством JSON в теле запроса
-router.post('/songs', async (req, res) => {
+router.post("/songs", async (req, res) => {
   const {
     path: filePath,
     format,
@@ -16,11 +16,11 @@ router.post('/songs', async (req, res) => {
     genre,
     track_number,
     date,
-    duration
+    duration,
   } = req.body;
 
   if (!filePath) {
-    return res.status(400).json({ error: 'Missing `path` field' });
+    return res.status(400).json({ error: "Missing `path` field" });
   }
 
   try {
@@ -38,23 +38,33 @@ router.post('/songs', async (req, res) => {
         duration    = EXCLUDED.duration
       RETURNING *;
     `;
-    const values = [filePath, format, title, artist, album, genre, track_number, date, duration];
+    const values = [
+      filePath,
+      format,
+      title,
+      artist,
+      album,
+      genre,
+      track_number,
+      date,
+      duration,
+    ];
     const { rows } = await db.query(query, values);
     res.json(rows[0]);
   } catch (err) {
-    console.error('Error inserting track:', err);
-    res.status(500).json({ error: 'Database error' });
+    console.error("Error inserting track:", err);
+    res.status(500).json({ error: "Database error" });
   }
 });
 
 // Получение списка всех треков
-router.get('/songs', async (req, res) => {
+router.get("/songs", async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM songs ORDER BY id');
+    const { rows } = await db.query("SELECT * FROM songs ORDER BY id");
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching songs:', err);
-    res.status(500).json({ error: 'Database error' });
+    console.error("Error fetching songs:", err);
+    res.status(500).json({ error: "Database error" });
   }
 });
 

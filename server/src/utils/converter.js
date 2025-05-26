@@ -1,12 +1,12 @@
 // src/utils/converter.js
 // Node.js скрипт для извлечения метаданных аудиофайлов и сохранения в PostgreSQL через db.query
 
-const fs = require('fs').promises;
-const path = require('path');
-const mm = require('music-metadata');
-const db = require('../config/db'); // Использует config/db.js
+const fs = require("fs").promises;
+const path = require("path");
+const mm = require("music-metadata");
+const db = require("../config/db"); // Использует config/db.js
 
-const SUPPORTED_EXT = ['.mp3', '.flac', '.wav', '.m4a', '.ogg', '.aac'];
+const SUPPORTED_EXT = [".mp3", ".flac", ".wav", ".m4a", ".ogg", ".aac"];
 
 // Создание таблицы songs, если не существует
 async function ensureSongsTable() {
@@ -37,10 +37,13 @@ async function extractMetadata(filePath) {
       title: common.title || null,
       artist: common.artist || null,
       album: common.album || null,
-      genre: Array.isArray(common.genre) ? common.genre.join(', ') : common.genre || null,
-      track_number: common.track && common.track.no ? String(common.track.no) : null,
+      genre: Array.isArray(common.genre)
+        ? common.genre.join(", ")
+        : common.genre || null,
+      track_number:
+        common.track && common.track.no ? String(common.track.no) : null,
       date: common.year ? String(common.year) : null,
-      duration: meta.format.duration ? Math.round(meta.format.duration) : null
+      duration: meta.format.duration ? Math.round(meta.format.duration) : null,
     };
   } catch (err) {
     console.warn(`Не удалось прочитать метаданные ${filePath}: ${err.message}`);
@@ -80,9 +83,15 @@ async function saveMetadata(meta) {
       duration    = EXCLUDED.duration;
   `;
   const values = [
-    meta.path, meta.format, meta.title, meta.artist,
-    meta.album, meta.genre, meta.track_number,
-    meta.date, meta.duration
+    meta.path,
+    meta.format,
+    meta.title,
+    meta.artist,
+    meta.album,
+    meta.genre,
+    meta.track_number,
+    meta.date,
+    meta.duration,
   ];
   await db.query(query, values);
 }
@@ -92,13 +101,13 @@ if (require.main === module) {
   (async () => {
     const inputDir = process.argv[2];
     if (!inputDir) {
-      console.error('Usage: node converter.js <music-directory>');
+      console.error("Usage: node converter.js <music-directory>");
       process.exit(1);
     }
 
     try {
       const stat = await fs.stat(inputDir);
-      if (!stat.isDirectory()) throw new Error('Not a directory');
+      if (!stat.isDirectory()) throw new Error("Not a directory");
     } catch {
       console.error(`Directory not found: ${inputDir}`);
       process.exit(1);
@@ -111,8 +120,8 @@ if (require.main === module) {
     }
     console.log(`Saved metadata for ${allMeta.length} files.`);
     process.exit(0);
-  })().catch(err => {
-    console.error('Error:', err);
+  })().catch((err) => {
+    console.error("Error:", err);
     process.exit(1);
   });
 }
