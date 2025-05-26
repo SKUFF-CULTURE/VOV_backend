@@ -57,7 +57,7 @@ make stop
 ![image](https://github.com/user-attachments/assets/0718e837-6ad8-4f7d-a65b-5008eea972d4)
 
 ### 💿 Исходная запись
-![image](https://github.com/user-attachments/assets/7e02a6f1-a284-4308-a769-4a0b2de42747)
+![image](https://github.com/user-attachments/assets/fb2288e1-6b4a-4c7b-962a-4b12c8c028ab)
 
 ### 📀 Улучшенная запись
 ![image](https://github.com/user-attachments/assets/7ca85370-e5be-4ae5-80a9-0938666d499b)
