@@ -137,7 +137,7 @@ exports.uploadAudio = async (req, res) => {
       throw kafkaError;
     }
 
-    return res.status(200).json({ id: rows[0].id, filePath: nfsFilePath });
+    return res.status(200).json({ id: rows[0].id, filePath: minioFilePath });
   } catch (e) {
     console.error("❌ [uploadAudio] Общая ошибка:", e);
     return res
