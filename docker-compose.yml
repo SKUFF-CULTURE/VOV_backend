@@ -191,6 +191,16 @@ services:
   #     "
   #   networks:
   #     - kafka-network
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - backend
+    container_name: nginx
   s3-minio:
     build:
       context: .
