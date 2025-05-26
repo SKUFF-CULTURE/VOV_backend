@@ -1,8 +1,8 @@
-const Redis = require('ioredis');
+const Redis = require("ioredis");
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'redis',
+  host: process.env.REDIS_HOST || "redis",
   port: parseInt(process.env.REDIS_PORT, 10) || 6379,
-  password: process.env.REDIS_PASSWORD // Пароль из переменной окружения
+  password: process.env.REDIS_PASSWORD, // Пароль из переменной окружения
 });
 
 async function getCached(key, fetchFn, ttl = 300) {
@@ -16,7 +16,7 @@ async function getCached(key, fetchFn, ttl = 300) {
     const result = await fetchFn();
     // Кэшируем только если результат не пустой
     if (result && (Array.isArray(result) ? result.length > 0 : true)) {
-      await redis.set(key, JSON.stringify(result), 'EX', ttl);
+      await redis.set(key, JSON.stringify(result), "EX", ttl);
     }
     return result;
   } catch (err) {

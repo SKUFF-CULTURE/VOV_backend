@@ -1,21 +1,21 @@
-const { v4: uuidv4 } = require('uuid');
-const sharp = require('sharp');
-const Minio = require('minio');
-const db = require('../config/db');
-const { producer } = require('../services/kafka');
-const fs = require('fs').promises;
-const path = require('path');
+const { v4: uuidv4 } = require("uuid");
+const sharp = require("sharp");
+const Minio = require("minio");
+const db = require("../config/db");
+const { producer } = require("../services/kafka");
+const fs = require("fs").promises;
+const path = require("path");
 
 const minioClient = new Minio.Client({
-  endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+  endPoint: process.env.MINIO_ENDPOINT || "localhost",
   port: +process.env.MINIO_PORT || 9000,
-  useSSL: process.env.MINIO_USE_SSL === 'true',
+  useSSL: process.env.MINIO_USE_SSL === "true",
   accessKey: process.env.MINIO_ACCESS_KEY,
   secretKey: process.env.MINIO_SECRET_KEY,
 });
 
-const BUCKET = process.env.MINIO_BUCKET || 'original';
-const NFS_PATH = '/mnt/nfs_share';
+const BUCKET = process.env.MINIO_BUCKET || "original";
+const NFS_PATH = "/mnt/nfs_share";
 // Промисификация putObject
 function putObjectAsync(bucket, objectName, buffer, metaData) {
   return new Promise((resolve, reject) => {
@@ -38,26 +38,38 @@ function presignedGetAsync(bucket, objectName, expires = 3600) {
 
 // === 1. Загрузка аудиофайла ===
 exports.uploadAudio = async (req, res) => {
-  console.log('📡 [uploadAudio] Запрос получен на сервер');
-  console.log('📥 [uploadAudio] Данные запроса:', {
+  console.log("📡 [uploadAudio] Запрос получен на сервер");
+  console.log("📥 [uploadAudio] Данные запроса:", {
     body: req.body,
-    file: req.file ? { originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size } : null,
+    file: req.file
+      ? {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+        }
+      : null,
   });
 
   try {
     const { file } = req;
     const { userId } = req.body;
     if (!file || !userId) {
-      console.warn('⚠️ [uploadAudio] Отсутствуют file или userId');
-      return res.status(400).json({ error: 'file и userId обязательны' });
+      console.warn("⚠️ [uploadAudio] Отсутствуют file или userId");
+      return res.status(400).json({ error: "file и userId обязательны" });
     }
 
     const id = uuidv4();
     const objectName = `${userId}/${id}-${file.originalname}`;
-    const nfsFilePath = path.join(NFS_PATH, userId, `${id}-${file.originalname}`);
+    const nfsFilePath = path.join(
+      NFS_PATH,
+      userId,
+      `${id}-${file.originalname}`
+    );
 
     // Создаём папку в NFS, если не существует
-    console.log(`📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId)}`);
+    console.log(
+      `📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId)}`
+    );
     await fs.mkdir(path.join(NFS_PATH, userId), { recursive: true });
 
     // Сохраняем файл в NFS
@@ -68,15 +80,14 @@ exports.uploadAudio = async (req, res) => {
     // Сохраняем файл в MinIO
     console.log(`📤 [uploadAudio] Попытка загрузки в MinIO: ${objectName}`);
     try {
-      await putObjectAsync(
-        BUCKET,
-        objectName,
-        file.buffer,
-        { 'Content-Type': file.mimetype }
+      await putObjectAsync(BUCKET, objectName, file.buffer, {
+        "Content-Type": file.mimetype,
+      });
+      console.log(
+        `✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`
       );
-      console.log(`✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`);
     } catch (minioError) {
-      console.error('❌ [uploadAudio] Ошибка MinIO:', minioError);
+      console.error("❌ [uploadAudio] Ошибка MinIO:", minioError);
       throw minioError;
     }
 
@@ -88,14 +99,20 @@ exports.uploadAudio = async (req, res) => {
     `;
 
     // Сохранение в PostgreSQL (путь до NFS)
-    console.log('📝 [uploadAudio] Попытка записи в PostgreSQL:', { id, userId, filePath: nfsFilePath });
+    console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", {
+      id,
+      userId,
+      filePath: nfsFilePath,
+    });
     let rows;
     try {
       const result = await db.query(insert, [id, userId, minioFilePath]);
       rows = result.rows;
-      console.log(`✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${rows[0].id}`);
+      console.log(
+        `✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${rows[0].id}`
+      );
     } catch (dbError) {
-      console.error('❌ [uploadAudio] Ошибка PostgreSQL:', dbError);
+      console.error("❌ [uploadAudio] Ошибка PostgreSQL:", dbError);
       throw dbError;
     }
 
@@ -108,27 +125,29 @@ exports.uploadAudio = async (req, res) => {
       mimeType: file.mimetype,
       createdAt: new Date().toISOString(),
     };
-    console.log('📤 [uploadAudio] Попытка отправки в Kafka:', message);
+    console.log("📤 [uploadAudio] Попытка отправки в Kafka:", message);
     try {
       await producer.send({
-        topic: 'app.main.audio_raw',
+        topic: "app.main.audio_raw",
         messages: [{ value: JSON.stringify(message) }],
       });
       console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka:`, message);
     } catch (kafkaError) {
-      console.error('❌ [uploadAudio] Ошибка Kafka:', kafkaError);
+      console.error("❌ [uploadAudio] Ошибка Kafka:", kafkaError);
       throw kafkaError;
     }
 
     return res.status(200).json({ id: rows[0].id, filePath: nfsFilePath });
   } catch (e) {
-    console.error('❌ [uploadAudio] Общая ошибка:', e);
-    return res.status(500).json({ error: 'Ошибка загрузки файла', details: e.message });
+    console.error("❌ [uploadAudio] Общая ошибка:", e);
+    return res
+      .status(500)
+      .json({ error: "Ошибка загрузки файла", details: e.message });
   }
 };
 // === 2. Сохранение метаданных ===
 exports.uploadMetadata = async (req, res) => {
-  console.log('📡 [uploadMetadata] Запрос получен:', req.body);
+  console.log("📡 [uploadMetadata] Запрос получен:", req.body);
 
   try {
     const {
@@ -142,28 +161,30 @@ exports.uploadMetadata = async (req, res) => {
     } = req.body;
 
     if (!trackId) {
-      console.warn('⚠️ [uploadMetadata] Отсутствует trackId');
-      return res.status(400).json({ error: 'trackId обязателен' });
+      console.warn("⚠️ [uploadMetadata] Отсутствует trackId");
+      return res.status(400).json({ error: "trackId обязателен" });
     }
 
     let coverBase64 = null;
     if (coverUrl) {
       const match = coverUrl.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!match) {
-        console.warn('⚠️ [uploadMetadata] Неверный формат coverUrl');
-        return res.status(400).json({ error: 'Неверный формат coverUrl, ожидается data URI' });
+        console.warn("⚠️ [uploadMetadata] Неверный формат coverUrl");
+        return res
+          .status(400)
+          .json({ error: "Неверный формат coverUrl, ожидается data URI" });
       }
 
       const mimeType = match[1];
       const base64Data = match[2];
-      const acceptableFormats = ['image/jpeg', 'image/png'];
+      const acceptableFormats = ["image/jpeg", "image/png"];
 
       if (acceptableFormats.includes(mimeType)) {
         coverBase64 = coverUrl;
       } else {
-        const imgBuf = Buffer.from(base64Data, 'base64');
+        const imgBuf = Buffer.from(base64Data, "base64");
         const pngBuf = await sharp(imgBuf).png().toBuffer();
-        coverBase64 = `data:image/png;base64,${pngBuf.toString('base64')}`;
+        coverBase64 = `data:image/png;base64,${pngBuf.toString("base64")}`;
       }
     }
 
@@ -175,20 +196,22 @@ exports.uploadMetadata = async (req, res) => {
     `;
     const vals = [trackId, title, author, year, album, country, coverBase64];
 
-    console.log('📝 [uploadMetadata] Запись в PostgreSQL:', vals);
+    console.log("📝 [uploadMetadata] Запись в PostgreSQL:", vals);
     const { rows } = await db.query(insertMeta, vals);
     console.log(`✅ [uploadMetadata] Метаданные сохранены: id=${rows[0].id}`);
 
     return res.status(200).json({ metadataId: rows[0].id });
   } catch (e) {
-    console.error('❌ [uploadMetadata] Ошибка:', e);
-    return res.status(500).json({ error: 'Ошибка при сохранении метаданных' });
+    console.error("❌ [uploadMetadata] Ошибка:", e);
+    return res.status(500).json({ error: "Ошибка при сохранении метаданных" });
   }
 };
 
 // === 3. Генерация подписанного URL для скачивания ===
 async function resolveObject(trackId, version) {
-  console.log(`🔍 [resolveObject] Поиск трека: trackId=${trackId}, version=${version}`);
+  console.log(
+    `🔍 [resolveObject] Поиск трека: trackId=${trackId}, version=${version}`
+  );
   const { rows } = await db.query(
     `SELECT file_path_original, file_path_processed
        FROM public.restorations
@@ -196,12 +219,13 @@ async function resolveObject(trackId, version) {
     [trackId]
   );
   if (!rows.length) {
-    console.warn('⚠️ [resolveObject] Трек не найден');
-    throw { status: 404, message: 'Трек не найден' };
+    console.warn("⚠️ [resolveObject] Трек не найден");
+    throw { status: 404, message: "Трек не найден" };
   }
   const { file_path_original, file_path_processed } = rows[0];
-  if (version === 'original') return file_path_original;
-  if (version === 'processed' && file_path_processed) return file_path_processed;
+  if (version === "original") return file_path_original;
+  if (version === "processed" && file_path_processed)
+    return file_path_processed;
   if (!version && file_path_processed) return file_path_processed;
   return file_path_original;
 }
@@ -211,15 +235,17 @@ exports.streamTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
     const version = req.query.version;
-    console.log(`📡 [streamTrack] Запрос стриминга: trackId=${trackId}, version=${version}`);
+    console.log(
+      `📡 [streamTrack] Запрос стриминга: trackId=${trackId}, version=${version}`
+    );
 
     const path = await resolveObject(trackId, version);
-    const [bucket, ...parts] = path.split('/');
-    const objectName = parts.join('/');
+    const [bucket, ...parts] = path.split("/");
+    const objectName = parts.join("/");
 
     // Инкремент play_count
     await db.query(
-      'UPDATE public.public_library SET play_count = play_count + 1 WHERE track_id = $1',
+      "UPDATE public.public_library SET play_count = play_count + 1 WHERE track_id = $1",
       [trackId]
     );
 
@@ -240,35 +266,45 @@ exports.streamTrack = async (req, res) => {
 
         if (start >= total || start > end) {
           console.warn(`⚠️ [streamTrack] Неверный диапазон: ${range}`);
-          res.status(416)
-            .setHeader('Content-Range', `bytes */${total}`)
-            .end();
+          res.status(416).setHeader("Content-Range", `bytes */${total}`).end();
           return;
         }
       }
     }
 
     const chunkSize = end - start + 1;
-    console.log(`📤 [streamTrack] Стриминг: start=${start}, end=${end}, chunkSize=${chunkSize}`);
+    console.log(
+      `📤 [streamTrack] Стриминг: start=${start}, end=${end}, chunkSize=${chunkSize}`
+    );
 
     res.status(statusCode);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Content-Length', chunkSize);
-    res.setHeader('Content-Type', stat.metaData['content-type'] || 'application/octet-stream');
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Content-Length", chunkSize);
+    res.setHeader(
+      "Content-Type",
+      stat.metaData["content-type"] || "application/octet-stream"
+    );
     if (statusCode === 206) {
-      res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
     }
 
-    const stream = await minioClient.getPartialObject(bucket, objectName, start, chunkSize);
-    stream.on('error', err => {
-      console.error('❌ [streamTrack] Ошибка стриминга:', err);
+    const stream = await minioClient.getPartialObject(
+      bucket,
+      objectName,
+      start,
+      chunkSize
+    );
+    stream.on("error", (err) => {
+      console.error("❌ [streamTrack] Ошибка стриминга:", err);
       if (!res.headersSent) res.sendStatus(500);
     });
 
     stream.pipe(res);
   } catch (err) {
-    console.error('❌ [streamTrack] Ошибка:', err);
-    res.status(err.status || 500).json({ error: err.message || 'Внутренняя ошибка' });
+    console.error("❌ [streamTrack] Ошибка:", err);
+    res
+      .status(err.status || 500)
+      .json({ error: err.message || "Внутренняя ошибка" });
   }
 };
 
@@ -277,23 +313,30 @@ exports.downloadTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
     const version = req.query.version;
-    console.log(`📡 [downloadTrack] Запрос скачивания: trackId=${trackId}, version=${version}`);
+    console.log(
+      `📡 [downloadTrack] Запрос скачивания: trackId=${trackId}, version=${version}`
+    );
 
     const path = await resolveObject(trackId, version);
-    const [bucket, ...parts] = path.split('/');
-    const objectName = parts.join('/');
+    const [bucket, ...parts] = path.split("/");
+    const objectName = parts.join("/");
 
     const stream = await minioClient.getObject(bucket, objectName);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(objectName)}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(objectName)}"`
+    );
+    res.setHeader("Content-Type", "application/octet-stream");
     stream.pipe(res);
-    stream.on('error', err => {
-      console.error('❌ [downloadTrack] Ошибка скачивания:', err);
+    stream.on("error", (err) => {
+      console.error("❌ [downloadTrack] Ошибка скачивания:", err);
       if (!res.headersSent) res.sendStatus(500);
     });
   } catch (err) {
-    console.error('❌ [downloadTrack] Ошибка:', err);
-    res.status(err.status || 500).json({ error: err.message || 'Внутренняя ошибка' });
+    console.error("❌ [downloadTrack] Ошибка:", err);
+    res
+      .status(err.status || 500)
+      .json({ error: err.message || "Внутренняя ошибка" });
   }
 };
 
@@ -301,8 +344,8 @@ exports.isReady = (req, res) => {
   const { trackId } = req.query;
   console.log(`📡 [isReady] Проверка статуса: trackId=${trackId}`);
   if (!trackId) {
-    console.warn('⚠️ [isReady] Отсутствует trackId');
-    return res.status(400).json({ error: 'trackId обязателен' });
+    console.warn("⚠️ [isReady] Отсутствует trackId");
+    return res.status(400).json({ error: "trackId обязателен" });
   }
   return res.sendStatus(200);
 };

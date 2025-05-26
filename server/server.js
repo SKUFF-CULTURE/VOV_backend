@@ -1,7 +1,7 @@
-const app = require('./src/app');
+const app = require("./src/app");
 
-const config = require('./src/config/config');
-const {initBuckets} = require('./src/utils/minio-init')
+const config = require("./src/config/config");
+const { initBuckets } = require("./src/utils/minio-init");
 
 const PORT = config.port || 5000;
 
@@ -12,7 +12,7 @@ initBuckets()
       console.log(`Server listening on port ${PORT}`);
     });
   })
-  .catch(err => {
-    console.error('Failed to init MinIO buckets:', err);
+  .catch((err) => {
+    console.error("Failed to init MinIO buckets:", err);
     process.exit(1);
   });
