@@ -52,25 +52,26 @@ exports.uploadAudio = async (req, res) => {
 
   try {
     const { file } = req;
-    const { userId } = req.body;
+    const { userId, artist, songName } = req.body; // Добавляем artist и songName из req.body
     if (!file || !userId) {
       console.warn("⚠️ [uploadAudio] Отсутствуют file или userId");
       return res.status(400).json({ error: "file и userId обязательны" });
     }
 
     const id = uuidv4();
-    const objectName = `${userId}/${id}-${file.originalname}`;
+    const objectName = `${userId}/${id}/${file.originalname}`; // Изменяем путь в MinIO
     const nfsFilePath = path.join(
       NFS_PATH,
       userId,
-      `${id}-${file.originalname}`
+      id,
+      `${file.originalname}` // Новый формат пути: mnt/nfs_share/userId/id/filename.mp3
     );
 
     // Создаём папку в NFS, если не существует
     console.log(
-      `📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId)}`
+      `📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId, id)}`
     );
-    await fs.mkdir(path.join(NFS_PATH, userId), { recursive: true });
+    await fs.mkdir(path.join(NFS_PATH, userId, id), { recursive: true });
 
     // Сохраняем файл в NFS
     console.log(`📤 [uploadAudio] Сохранение в NFS: ${nfsFilePath}`);
@@ -98,11 +99,11 @@ exports.uploadAudio = async (req, res) => {
       RETURNING id;
     `;
 
-    // Сохранение в PostgreSQL (путь до NFS)
+    // Сохранение в PostgreSQL (путь до MINIO)
     console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", {
       id,
       userId,
-      filePath: nfsFilePath,
+      filePath: minioFilePath,
     });
     let rows;
     try {
@@ -120,9 +121,11 @@ exports.uploadAudio = async (req, res) => {
     const message = {
       id: rows[0].id,
       userId,
-      filePath: nfsFilePath, // Путь до NFS
+      filePath: nfsFilePath,
       originalName: file.originalname,
       mimeType: file.mimetype,
+      artist, // Добавляем artist
+      songName, // Добавляем songName
       createdAt: new Date().toISOString(),
     };
     console.log("📤 [uploadAudio] Попытка отправки в Kafka:", message);
