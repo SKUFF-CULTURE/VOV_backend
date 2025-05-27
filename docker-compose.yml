@@ -186,6 +186,7 @@ services:
   #     "
   #   networks:
   #     - kafka-network
+  
   s3-minio:
     build:
       context: .
@@ -210,6 +211,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
   nfs-server:
     build:
       context: .
@@ -252,7 +254,71 @@ services:
   
   #   networks:
   #     - kafka-network
-  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9080:9080"  # Изменено: внешний порт 9080 мапится на внутренний 9090
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    env_file:
+      - grafana.env  # Замените на свой пароль
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - prometheus
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:your_password@db:5432/postgres?sslmode=disable"  # Замените your_password
+    ports:
+      - "9187:9187"
+    networks:
+      - kafka-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+      REDIS_PASSWORD: ""  # Укажите пароль, если он есть в redis.env
+    ports:
+      - "9121:9121"
+    networks:
+      - kafka-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
 networks:
   kafka-network:
     driver: bridge
@@ -269,4 +335,8 @@ volumes:
   esdata:
     driver: local
   zookeeper-data:
-
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  

@@ -8,6 +8,37 @@ require('dotenv').config();
 const { ensureIndex } = require('./services/setupEs.js');
 const { initBuckets } = require('./utils/minio-init.js');
 const { connectProducer } = require('./services/kafka.js');
+// Добавляем prom-client для сбора метрик
+const client = require('prom-client');
+
+// Включаем сбор стандартных метрик
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ timeout: 5000 });
+
+// Создаем кастомную метрику для количества HTTP-запросов
+const httpRequestCounter = new client.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'path', 'status']
+});
+
+// Мидлвэр для подсчета HTTP-запросов
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    httpRequestCounter.inc({
+      method: req.method,
+      path: req.path,
+      status: res.statusCode
+    });
+  });
+  next();
+});
+
+// Эндпоинт для Prometheus
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
