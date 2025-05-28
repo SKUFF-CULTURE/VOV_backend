@@ -6,3 +6,4 @@ hasura.env
 redis.env
 grafana.env
 exporters.env
+/VOV_web/node_modules
