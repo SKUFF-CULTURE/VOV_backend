@@ -79,6 +79,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  frontend:
+    build:
+      context: ./VOV_web
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    environment:
+      - VITE_API_URL=/api/ # Для Axios, чтобы запросы шли через Nginx
+    networks:
+      - kafka-network
+    restart: unless-stopped
 
   server:
     build: ./server
@@ -186,6 +196,19 @@ services:
   #     "
   #   networks:
   #     - kafka-network
+  
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - server 
+    container_name: nginx
+
   s3-minio:
     build:
       context: .
@@ -193,13 +216,13 @@ services:
     container_name: s3-minio
     ports:
       - "9000:9000"
-      - "9090:9090"
+      - "9080:9080"
     env_file:
       - s3-minio.env
     environment:
       MINIO_BROWSER: "on"
       MINIO_SERVER_URL: "http://localhost:9000"
-    command: server /data --console-address ":9090"
+    command: server /data --console-address ":9080"
     volumes:
       - minio-data:/data
     networks:
@@ -210,6 +233,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
   nfs-server:
     build:
       context: .
@@ -252,7 +276,72 @@ services:
   
   #   networks:
   #     - kafka-network
-  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"  # Изменено: внешний порт 9080 мапится на внутренний 9090
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    env_file:
+      - grafana.env  # Замените на свой пароль
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - kafka-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - prometheus
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    env_file:
+      - exporters.env
+    ports:
+      - "9187:9187"
+    networks:
+      - kafka-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+    env_file:
+      - exporters.env
+    ports:
+      - "9121:9121"
+    networks:
+      - kafka-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
 networks:
   kafka-network:
     driver: bridge
@@ -269,4 +358,8 @@ volumes:
   esdata:
     driver: local
   zookeeper-data:
-
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  

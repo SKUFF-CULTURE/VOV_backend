@@ -52,19 +52,20 @@ exports.uploadAudio = async (req, res) => {
 
   try {
     const { file } = req;
-    const { userId, artist, songName } = req.body; // Добавляем artist и songName из req.body
+    const { userId, artist, songName } = req.body;
     if (!file || !userId) {
       console.warn("⚠️ [uploadAudio] Отсутствуют file или userId");
       return res.status(400).json({ error: "file и userId обязательны" });
     }
 
     const id = uuidv4();
-    const objectName = `${userId}/${id}/${file.originalname}`; // Изменяем путь в MinIO
+    const kafkaKey = uuidv4(); // Генерируем UUID для ключа Kafka
+    const objectName = `${userId}/${id}/${file.originalname}`;
     const nfsFilePath = path.join(
       NFS_PATH,
       userId,
       id,
-      `${file.originalname}` // Новый формат пути: mnt/nfs_share/userId/id/filename.mp3
+      `${file.originalname}`
     );
 
     // Создаём папку в NFS, если не существует
@@ -119,22 +120,24 @@ exports.uploadAudio = async (req, res) => {
 
     // Отправка сообщения в Kafka
     const message = {
+      event: "audio_uploaded", // Добавляем поле event
+      client_ip: req.ip || "unknown", // Получаем IP клиента или заглушка
       id: rows[0].id,
       userId,
       filePath: nfsFilePath,
       originalName: file.originalname,
       mimeType: file.mimetype,
-      artist, // Добавляем artist
-      songName, // Добавляем songName
+      artist,
+      songName,
       createdAt: new Date().toISOString(),
     };
     console.log("📤 [uploadAudio] Попытка отправки в Kafka:", message);
     try {
       await producer.send({
         topic: "app.main.audio_raw",
-        messages: [{ value: JSON.stringify(message) }],
+        messages: [{ key: kafkaKey, value: JSON.stringify(message) }], // Добавляем ключ
       });
-      console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka:`, message);
+      console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka: key=${kafkaKey}`, message);
     } catch (kafkaError) {
       console.error("❌ [uploadAudio] Ошибка Kafka:", kafkaError);
       throw kafkaError;
