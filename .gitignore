@@ -5,3 +5,4 @@ s3-minio.env
 hasura.env
 redis.env
 grafana.env
+exporters.env
