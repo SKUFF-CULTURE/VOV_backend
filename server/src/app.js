@@ -21,7 +21,7 @@ const allowedOrigins = process.env.CORS_ORIGINS
         return origin.trim(); // Если не URL, возвращаем как есть
       }
     })
-  : ["http://localhost:5173", "http://frontend:3000"]; // Значения по умолчанию
+  : ["http://localhost:5173", "http://frontend:5173"]; // Значения по умолчанию
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
