@@ -194,13 +194,13 @@ services:
     container_name: s3-minio
     ports:
       - "9000:9000"
-      - "9090:9090"
+      - "9080:9080"
     env_file:
       - s3-minio.env
     environment:
       MINIO_BROWSER: "on"
       MINIO_SERVER_URL: "http://localhost:9000"
-    command: server /data --console-address ":9090"
+    command: server /data --console-address ":9080"
     volumes:
       - minio-data:/data
     networks:
@@ -261,7 +261,7 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "9080:9080"  # Изменено: внешний порт 9080 мапится на внутренний 9090
+      - "9090:9090"  # Изменено: внешний порт 9080 мапится на внутренний 9090
     networks:
       - kafka-network
     restart: unless-stopped
@@ -294,8 +294,8 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
     container_name: postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:your_password@db:5432/postgres?sslmode=disable"  # Замените your_password
+    env_file:
+      - exporters.env
     ports:
       - "9187:9187"
     networks:
@@ -310,7 +310,8 @@ services:
     container_name: redis-exporter
     environment:
       REDIS_ADDR: "redis:6379"
-      REDIS_PASSWORD: ""  # Укажите пароль, если он есть в redis.env
+    env_file:
+      - exporters.env
     ports:
       - "9121:9121"
     networks:
