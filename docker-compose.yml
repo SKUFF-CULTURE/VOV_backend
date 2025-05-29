@@ -71,7 +71,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d
-      - nfs-data:/mnt/nfs_share
+      # - nfs-data:/nfs/shared
     networks:
       - kafka-network
     healthcheck:
@@ -111,7 +111,7 @@ services:
       - "5000:5000"
     volumes:
       - ./server:/app
-      - nfs-data:/mnt/nfs_share
+      # - nfs-data:/nfs/shared
       - ./server/node_modules:/app/node_modules
     networks:
       - kafka-network
@@ -239,19 +239,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # nfs-server:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.nfs
-  #   container_name: nfs-server
-  #   volumes:
-  #     - nfs-data:/mnt/nfs_share
-  #   privileged: true
-  #   ports:
-  #     - "2049:2049"
-  #   networks:
-  #     - kafka-network
-  #   restart: unless-stopped
   service_ping:
     build:
       context: .
@@ -349,6 +336,7 @@ services:
 
 networks:
   kafka-network:
+    name: kafka-network
     driver: bridge
     ipam:
       config:
@@ -357,7 +345,6 @@ networks:
 volumes:
   db-data:
   ollama_data:
-  nfs-data:
   minio-data:
   kafka-data:
   esdata:
@@ -367,4 +354,10 @@ volumes:
     driver: local
   grafana-data:
     driver: local
+  # nfs-data:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: "addr=127.0.0.1,rw,nolock,soft"
+  #     device: ":/nfs/shared"
   

@@ -8,6 +8,7 @@ const {
   getTopByPlays,
   getTopByLikes,
   addComplaint,
+  getTracksByTags
 } = require("../controllers/publicLibraryController");
 
 router.post("/", addPublicTrack);
@@ -17,4 +18,5 @@ router.get("/top-likes", getTopByLikes);
 router.get("/:trackId", getPublicTrackById);
 router.delete("/:trackId", deletePublicTrack);
 router.post("/complaints", addComplaint);
+router.post("/tags", express.json(), getTracksByTags);
 module.exports = router;
