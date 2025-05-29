@@ -12,11 +12,10 @@ const { connectProducer } = require('./services/kafka.js');
 const { runConsumer } = require("./services/audioConsumer.js");
 // Добавляем prom-client для сбора метрик
 const client = require('prom-client');
-
+const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
 // Включаем сбор стандартных метрик
 const collectDefaultMetrics = client.collectDefaultMetrics;
 collectDefaultMetrics({ timeout: 5000 });
-
 // Создаем кастомную метрику для количества HTTP-запросов
 const httpRequestCounter = new client.Counter({
   name: 'http_requests_total',

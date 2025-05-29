@@ -1,8 +1,26 @@
-# ./frontend/Dockerfile
-FROM node:24-slim
+# ─── Stage 1: билдим фронтенд ─────────────
+FROM node:24-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 5173
-CMD ["npm", "run", "build"]
+
+COPY VOV_web/package*.json ./
+RUN npm ci
+
+COPY VOV_web/ ./
+RUN npm run build      # в /app/dist готовый статика-пакет
+
+# ─── Stage 2: nginx+SSL отдаёт статику ────
+FROM nginx:stable-alpine
+
+# Удалим дефолтный конфиг, чтобы не мешался
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Копируем ваш прод-конфиг, где есть оба сервера (80→301 и 443)
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Копируем собранный фронтенд
+COPY --from=builder /app/dist/ /usr/share/nginx/html/
+
+# Монтируем SSL-сертификаты через docker-compose
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]
