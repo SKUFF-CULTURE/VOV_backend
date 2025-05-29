@@ -5,6 +5,11 @@ const db = require("../config/db");
 const { producer } = require("../services/kafka");
 const fs = require("fs").promises;
 const path = require("path");
+const {
+  getCached,
+  invalidateCache,
+  invalidateCacheByPrefix,
+} = require("../utils/RedisCache");
 
 const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || "localhost",
@@ -58,20 +63,12 @@ exports.uploadAudio = async (req, res) => {
       return res.status(400).json({ error: "file и userId обязательны" });
     }
 
-    const id = uuidv4();
-    const kafkaKey = uuidv4(); // Генерируем UUID для ключа Kafka
+    const id = uuidv4(); // UUID трека
     const objectName = `${userId}/${id}/${file.originalname}`;
-    const nfsFilePath = path.join(
-      NFS_PATH,
-      userId,
-      id,
-      `${file.originalname}`
-    );
+    const nfsFilePath = path.join(NFS_PATH, userId, id, `${file.originalname}`);
 
-    // Создаём папку в NFS, если не существует
-    console.log(
-      `📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId, id)}`
-    );
+    // Создаём папку в NFS
+    console.log(`📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId, id)}`);
     await fs.mkdir(path.join(NFS_PATH, userId, id), { recursive: true });
 
     // Сохраняем файл в NFS
@@ -81,17 +78,10 @@ exports.uploadAudio = async (req, res) => {
 
     // Сохраняем файл в MinIO
     console.log(`📤 [uploadAudio] Попытка загрузки в MinIO: ${objectName}`);
-    try {
-      await putObjectAsync(BUCKET, objectName, file.buffer, {
-        "Content-Type": file.mimetype,
-      });
-      console.log(
-        `✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`
-      );
-    } catch (minioError) {
-      console.error("❌ [uploadAudio] Ошибка MinIO:", minioError);
-      throw minioError;
-    }
+    await putObjectAsync(BUCKET, objectName, file.buffer, {
+      "Content-Type": file.mimetype,
+    });
+    console.log(`✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`);
 
     const minioFilePath = `${BUCKET}/${objectName}`;
     const insert = `
@@ -100,29 +90,17 @@ exports.uploadAudio = async (req, res) => {
       RETURNING id;
     `;
 
-    // Сохранение в PostgreSQL (путь до MINIO)
-    console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", {
-      id,
-      userId,
-      filePath: minioFilePath,
-    });
-    let rows;
-    try {
-      const result = await db.query(insert, [id, userId, minioFilePath]);
-      rows = result.rows;
-      console.log(
-        `✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${rows[0].id}`
-      );
-    } catch (dbError) {
-      console.error("❌ [uploadAudio] Ошибка PostgreSQL:", dbError);
-      throw dbError;
-    }
+    // Сохранение в PostgreSQL
+    console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", { id, userId, filePath: minioFilePath });
+    const result = await db.query(insert, [id, userId, minioFilePath]);
+    const trackId = result.rows[0].id;
+    console.log(`✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${trackId}`);
 
-    // Отправка сообщения в Kafka
+    // Отправка сообщения в Kafka с UUID трека как ключом
     const message = {
-      event: "audio_uploaded", // Добавляем поле event
-      client_ip: req.ip || "unknown", // Получаем IP клиента или заглушка
-      id: rows[0].id,
+      event: "audio_uploaded",
+      client_ip: req.ip || "unknown",
+      id: trackId,
       userId,
       filePath: nfsFilePath,
       originalName: file.originalname,
@@ -132,23 +110,16 @@ exports.uploadAudio = async (req, res) => {
       createdAt: new Date().toISOString(),
     };
     console.log("📤 [uploadAudio] Попытка отправки в Kafka:", message);
-    try {
-      await producer.send({
-        topic: "app.main.audio_raw",
-        messages: [{ key: kafkaKey, value: JSON.stringify(message) }], // Добавляем ключ
-      });
-      console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka: key=${kafkaKey}`, message);
-    } catch (kafkaError) {
-      console.error("❌ [uploadAudio] Ошибка Kafka:", kafkaError);
-      throw kafkaError;
-    }
+    await producer.send({
+      topic: "app.main.audio_raw",
+      messages: [{ key: trackId, value: JSON.stringify(message) }], // Используем trackId как ключ
+    });
+    console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka: key=${trackId}`, message);
 
-    return res.status(200).json({ id: rows[0].id, filePath: minioFilePath });
+    return res.status(200).json({ id: trackId, filePath: minioFilePath });
   } catch (e) {
     console.error("❌ [uploadAudio] Общая ошибка:", e);
-    return res
-      .status(500)
-      .json({ error: "Ошибка загрузки файла", details: e.message });
+    return res.status(500).json({ error: "Ошибка загрузки файла", details: e.message });
   }
 };
 // === 2. Сохранение метаданных ===
@@ -343,6 +314,48 @@ exports.downloadTrack = async (req, res) => {
     res
       .status(err.status || 500)
       .json({ error: err.message || "Внутренняя ошибка" });
+  }
+};
+
+exports.getTrackLyrics = async (req, res) => {
+  const { trackId } = req.body;
+  if (!trackId) {
+    return res.status(400).json({ error: "trackId обязателен" });
+  }
+  const cacheKey = `trackLyrics:${trackId}`;
+  try {
+    const result = await getCached(
+      cacheKey,
+      async () => {
+        // Проверяем существование трека
+        const track = await db.query(
+          "SELECT 1 FROM public.restorations WHERE id = $1",
+          [trackId]
+        );
+        if (track.rowCount === 0) {
+          return { error: "Трек не найден", status: 404 };
+        }
+        // Получаем lyrics из restoration_metadata
+        const { rows } = await db.query(
+          `SELECT lyrics
+           FROM public.restoration_metadata
+           WHERE restoration_id = $1`,
+          [trackId]
+        );
+        if (rows.length === 0) {
+          return { error: "Lyrics не найдены для данного трека", status: 404 };
+        }
+        return { lyrics: rows[0].lyrics };
+      },
+      300
+    );
+    if (result.error) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error(`Ошибка getTrackLyrics ${trackId}:`, err);
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
