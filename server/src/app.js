@@ -8,6 +8,7 @@ require('dotenv').config();
 const { ensureIndex } = require('./services/setupEs.js');
 const { initBuckets } = require('./utils/minio-init.js');
 const { connectProducer } = require('./services/kafka.js');
+const { runConsumer } = require("./services/audioConsumer.js");
 // Добавляем prom-client для сбора метрик
 const client = require('prom-client');
 
@@ -108,6 +109,14 @@ const initServices = async () => {
     process.exit(1); // Завершаем процесс, если инициализация не удалась
   }
 };
+(async () => {
+  try {
+    await runConsumer();
+    console.log("Kafka Consumer запущен");
+  } catch (error) {
+    console.error("Ошибка запуска Kafka Consumer:", error);
+  }
+})();
 
 // Запуск инициализации сервисов
 initServices().then(() => {
