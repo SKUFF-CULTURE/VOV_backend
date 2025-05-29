@@ -239,19 +239,19 @@ services:
       timeout: 5s
       retries: 3
 
-  nfs-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.nfs
-    container_name: nfs-server
-    volumes:
-      - nfs-data:/mnt/nfs_share
-    privileged: true
-    ports:
-      - "2049:2049"
-    networks:
-      - kafka-network
-    restart: unless-stopped
+  # nfs-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.nfs
+  #   container_name: nfs-server
+  #   volumes:
+  #     - nfs-data:/mnt/nfs_share
+  #   privileged: true
+  #   ports:
+  #     - "2049:2049"
+  #   networks:
+  #     - kafka-network
+  #   restart: unless-stopped
   service_ping:
     build:
       context: .
