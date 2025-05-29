@@ -20,7 +20,7 @@ const minioClient = new Minio.Client({
 });
 
 const BUCKET = process.env.MINIO_BUCKET || "original";
-const NFS_PATH = "/mnt/nfs_share";
+const NFS_PATH = "/nfs/shared";
 // Промисификация putObject
 function putObjectAsync(bucket, objectName, buffer, metaData) {
   return new Promise((resolve, reject) => {
