@@ -379,7 +379,7 @@ exports.isReady = (req, res) => {
 
 //   try {
 //     const result = await db.query(
-//       "SELECT status FROM public.restorations WHERE id = $1",
+//       "SELECT file_path_processed FROM public.restorations WHERE id = $1",
 //       [trackId]
 //     );
 
@@ -388,16 +388,13 @@ exports.isReady = (req, res) => {
 //       return res.status(404).json({ error: "Трек не найден" });
 //     }
 
-//     const trackStatus = result.rows[0].status;
-//     console.log(`ℹ️ [isReady] Статус трека: ${trackStatus}`);
+//     const filePathProcessed = result.rows[0].file_path_processed;
+//     console.log(`ℹ️ [isReady] Путь к реставрированному файлу: ${filePathProcessed || 'отсутствует'}`);
 
-//     if (['pending', 'processing'].includes(trackStatus)) {
+//     if (!filePathProcessed) {
 //       return res.status(200).json({ status: "still processing" });
-//     } else if (trackStatus === 'processed') {
-//       return res.status(200).json({ status: "finalized" });
 //     } else {
-//       console.warn(`⚠️ [isReady] Неизвестный статус: ${trackStatus}`);
-//       return res.status(500).json({ error: "Неизвестный статус трека" });
+//       return res.status(200).json({ status: "finalized" });
 //     }
 //   } catch (err) {
 //     console.error(`❌ [isReady] Ошибка проверки статуса trackId=${trackId}:`, err);
