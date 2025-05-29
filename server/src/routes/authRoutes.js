@@ -9,7 +9,7 @@ const jwtAuth = require("../middlewares/jwtAuth");
 function issueTokenAndRedirect(req, res) {
   const { id, email, role, name, avatar_url } = req.user;
   if (role === "banned") {
-    return res.redirect("http://localhost:3000/banned");
+    return res.redirect("http://localhost:5173/banned");
   }
 
   const payload = {
@@ -35,7 +35,7 @@ function issueTokenAndRedirect(req, res) {
   );
 
   // пересылаем на фронт вместе с токеном
-  res.redirect(`http://localhost:3000/callback?token=${token}`);
+  res.redirect(`http://localhost:5173/callback?token=${token}`);
   //res.json({ token, user: req.user });
 }
 

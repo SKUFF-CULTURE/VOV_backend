@@ -3,7 +3,7 @@ const express = require("express");
 const multer = require("multer");
 const ctrl = require("../controllers/restorationController");
 const { producer } = require("../services/kafka");
-
+const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 // храним файл в памяти, чтобы сразу передать его в MinIO
 const upload = multer({
@@ -24,6 +24,7 @@ router.get("/stream/:trackId", ctrl.streamTrack);
 router.post("/ping", async (req, res) => {
   try {
     const clientIp = req.ip || "unknown";
+    const kafkaKey = uuidv4(); // Генерируем UUID для ключа Kafka
     const message = {
       event: "ping",
       client_ip: clientIp,
@@ -31,9 +32,9 @@ router.post("/ping", async (req, res) => {
     };
     await producer.send({
       topic: "app.main.nettools",
-      messages: [{ value: JSON.stringify(message) }],
+      messages: [{ key: kafkaKey, value: JSON.stringify(message) }],
     });
-    console.log(`🚀 [Ping] Отправлено в Kafka:`, message);
+    console.log(`🚀 [Ping] Отправлено в Kafka: key=${kafkaKey}`, message);
     return res.status(200).json({ message: "Ping sent" });
   } catch (e) {
     console.error("❌ [Ping] Ошибка:", e);
@@ -44,4 +45,5 @@ router.post("/ping", async (req, res) => {
 router.get("/download/:trackId", ctrl.downloadTrack);
 
 router.get("/isReady", ctrl.isReady);
+router.post("/lyrics", express.json(), ctrl.getTrackLyrics);
 module.exports = router;
