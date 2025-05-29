@@ -186,64 +186,52 @@ exports.getTracksByTags = async (req, res) => {
     }
   }
 
-  const cacheKey = `userLibraryTags:${userId}:${tagFilter.sort().join(",")}`;
   try {
-    const result = await getCached(
-      cacheKey,
-      async () => {
-        const user = await db.query(
-          "SELECT 1 FROM public.users WHERE id = $1",
-          [userId]
-        );
-        if (user.rowCount === 0) {
-          return { error: "Пользователь не найден", status: 404 };
-        }
-
-        let query = `
-          SELECT
-              r.id AS trackId,
-              r.file_path_original AS originalPath,
-              r.file_path_processed AS processedPath,
-              r.status AS status,
-              ul.added_at AS addedAt,
-              m.title AS title,
-              m.author AS author,
-              m.year AS year,
-              m.album AS album,
-              m.country AS country,
-              m.cover_url AS coverUrl,
-              m.tags,
-              COALESCE(pl.likes, 0) AS likes,
-              COALESCE(pl.play_count, 0) AS playCount
-           FROM public.user_library ul
-           JOIN public.restorations r ON r.id = ul.track_id
-           LEFT JOIN public.restoration_metadata m ON r.id = m.restoration_id
-           LEFT JOIN public.public_library pl ON r.id = pl.track_id
-           WHERE ul.user_id = $1
-        `;
-        const params = [userId];
-
-        if (tagFilter.length > 0) {
-          query += ` AND (`;
-          tagFilter.forEach((tag, index) => {
-            if (index > 0) query += ` OR `;
-            query += `m.tags LIKE $${params.length + 1}`;
-            params.push(`%${tag}%`);
-          });
-          query += `)`;
-        }
-
-        query += ` ORDER BY ul.added_at DESC`;
-        const { rows } = await db.query(query, params);
-        return { tracks: rows };
-      },
-      300
+    const user = await db.query(
+      "SELECT 1 FROM public.users WHERE id = $1",
+      [userId]
     );
-
-    if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: "Пользователь не найден" });
     }
-    return res.status(200).json(result);
+
+    let query = `
+      SELECT
+          r.id AS trackId,
+          r.file_path_original AS originalPath,
+          r.file_path_processed AS processedPath,
+          r.status AS status,
+          ul.added_at AS addedAt,
+          m.title AS title,
+          m.author AS author,
+          m.year AS year,
+          m.album AS album,
+          m.country AS country,
+          m.cover_url AS coverUrl,
+          m.tags,
+          COALESCE(pl.likes, 0) AS likes,
+          COALESCE(pl.play_count, 0) AS playCount
+       FROM public.user_library ul
+       JOIN public.restorations r ON r.id = ul.track_id
+       LEFT JOIN public.restoration_metadata m ON r.id = m.restoration_id
+       LEFT JOIN public.public_library pl ON r.id = pl.track_id
+       WHERE ul.user_id = $1
+    `;
+    const params = [userId];
+
+    if (tagFilter.length > 0) {
+      query += ` AND (`;
+      tagFilter.forEach((tag, index) => {
+        if (index > 0) query += ` OR `;
+        query += `m.tags LIKE $${params.length + 1}`;
+        params.push(`%${tag}%`);
+      });
+      query += `)`;
+    }
+
+    query += ` ORDER BY ul.added_at DESC`;
+    const { rows } = await db.query(query, params);
+    return res.status(200).json({ tracks: rows });
   } catch (err) {
     console.error(`Ошибка getTracksByTags [userId=${userId}]:`, err);
     return res.status(500).json({ error: "Внутренняя ошибка сервера" });

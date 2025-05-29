@@ -368,3 +368,39 @@ exports.isReady = (req, res) => {
   }
   return res.sendStatus(200);
 };
+// exports.isReady = async (req, res) => {
+//   const { trackId } = req.query;
+//   console.log(`📡 [isReady] Проверка статуса: trackId=${trackId}`);
+  
+//   if (!trackId) {
+//     console.warn("⚠️ [isReady] Отсутствует trackId");
+//     return res.status(400).json({ error: "trackId обязателен" });
+//   }
+
+//   try {
+//     const result = await db.query(
+//       "SELECT status FROM public.restorations WHERE id = $1",
+//       [trackId]
+//     );
+
+//     if (result.rowCount === 0) {
+//       console.warn(`⚠️ [isReady] Трек не найден: trackId=${trackId}`);
+//       return res.status(404).json({ error: "Трек не найден" });
+//     }
+
+//     const trackStatus = result.rows[0].status;
+//     console.log(`ℹ️ [isReady] Статус трека: ${trackStatus}`);
+
+//     if (['pending', 'processing'].includes(trackStatus)) {
+//       return res.status(200).json({ status: "still processing" });
+//     } else if (trackStatus === 'processed') {
+//       return res.status(200).json({ status: "finalized" });
+//     } else {
+//       console.warn(`⚠️ [isReady] Неизвестный статус: ${trackStatus}`);
+//       return res.status(500).json({ error: "Неизвестный статус трека" });
+//     }
+//   } catch (err) {
+//     console.error(`❌ [isReady] Ошибка проверки статуса trackId=${trackId}:`, err);
+//     return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+//   }
+// };
