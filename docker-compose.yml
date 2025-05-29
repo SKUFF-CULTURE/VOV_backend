@@ -71,7 +71,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d
-      - nfs-data:/mnt/nfs_share
+      - nfs-data:/nfs/shared
     networks:
       - kafka-network
     healthcheck:
