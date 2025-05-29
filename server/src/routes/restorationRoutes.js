@@ -45,4 +45,5 @@ router.post("/ping", async (req, res) => {
 router.get("/download/:trackId", ctrl.downloadTrack);
 
 router.get("/isReady", ctrl.isReady);
+router.post("/lyrics", express.json(), ctrl.getTrackLyrics);
 module.exports = router;

@@ -13,4 +13,5 @@ router.post("/library", express.json(), ctrl.addToLibrary);
 // Body: { userId }
 router.post("/library/list", express.json(), ctrl.getLibrary);
 router.delete("/library", express.json(), ctrl.removeFromLibrary);
+router.post("/tags", express.json(), ctrl.getTracksByTags); // Новый маршрут
 module.exports = router;

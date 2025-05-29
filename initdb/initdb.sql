@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.restorations (
   status               VARCHAR(50) NOT NULL DEFAULT 'uploaded',
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+
 );
 ALTER TABLE public.restorations
   ADD COLUMN IF NOT EXISTS complaint_count INTEGER NOT NULL DEFAULT 0;
@@ -89,6 +90,9 @@ CREATE TABLE IF NOT EXISTS public.restoration_metadata (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE public.restoration_metadata
+  ADD COLUMN IF NOT EXISTS lyrics TEXT,
+  ADD COLUMN IF NOT EXISTS tags TEXT;          -- Для хранения тегов в формате JSON
 
 -- === 7. Триггер на public.restoration_metadata ===
 DROP TRIGGER IF EXISTS trg_metadata_updated_at ON public.restoration_metadata;
