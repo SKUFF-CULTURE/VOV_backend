@@ -5,7 +5,7 @@ const redis = new Redis({
   password: process.env.REDIS_PASSWORD, // Пароль из переменной окружения
 });
 
-async function getCached(key, fetchFn, ttl = 300) {
+async function getCached(key, fetchFn, ttl = 3) {
   try {
     const cached = await redis.get(key);
     if (cached !== null) {

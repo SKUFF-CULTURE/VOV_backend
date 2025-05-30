@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   name       VARCHAR(100),
   email      VARCHAR(100) UNIQUE,
   google_id  VARCHAR(255),
-  role       VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'banned'))
+  role       VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'banned', 'pro'))
 );
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
