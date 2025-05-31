@@ -25,9 +25,9 @@ const kafka = new Kafka({
   clientId: "audio-processing-service",
   brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
 });
-
+//Инициализация консьюмера кафки
 const consumer = kafka.consumer({ groupId: "audio-processing-group" });
-
+//Подписка на топик консьюмера для получения трека от ml пайплайна
 const runConsumer = async () => {
   await consumer.connect();
   await consumer.subscribe({ topic: "app.main.audio_recognised", fromBeginning: true });

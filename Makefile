@@ -42,7 +42,22 @@ db:
 mistral:
 	docker compose exec service_ollama ollama pull mistral
 
-# Удаление бд 
-# db delete:
-# 	docker compose stop db
-# 	docker compsoe rm -f db
+# Перезапуск
+reload:
+	docker compose down -v && docker compose up --build
+
+# Ребилд без кэша
+reboot:
+	docker compose down -v && docker compose build --no-cache && docker compose up 
+
+# Пруннинг контейнеров
+prune:
+	docker compose down -v && docker volume prune && docker image prune && docker container prune && docker network prune
+
+# Очистка всего (осторожно, можно удалить и несвязанные контейнеры)
+
+absdelete:
+	docker compose down -v && docker volume rm $(docker volume ls) && docker image rm $(docker image ls) && docker container rm $(dockere container ls)
+
+netdelete:
+	docker compose down -v && docker network rm $(docker network ls)

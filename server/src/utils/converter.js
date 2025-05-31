@@ -1,6 +1,6 @@
 // src/utils/converter.js
 // Node.js скрипт для извлечения метаданных аудиофайлов и сохранения в PostgreSQL через db.query
-
+// Скрипт в проекте не использовался, мета извлекается на стороне фронтенда
 const fs = require("fs").promises;
 const path = require("path");
 const mm = require("music-metadata");

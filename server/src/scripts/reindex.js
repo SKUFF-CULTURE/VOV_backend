@@ -2,6 +2,7 @@ const db = require("../config/db.js");
 const es = require("../utils/esClient.js");
 const { ensureIndex } = require("../services/setupEs.js");
 
+//Проверка доступности
 async function waitForElasticsearch() {
   console.log("Waiting for Elasticsearch...");
   for (let i = 0; i < 10; i++) {
@@ -17,6 +18,7 @@ async function waitForElasticsearch() {
   throw new Error("Elasticsearch not available after retries");
 }
 
+//Проверка psql
 async function waitForPostgres() {
   console.log("Waiting for PostgreSQL...");
   for (let i = 0; i < 10; i++) {
@@ -31,7 +33,7 @@ async function waitForPostgres() {
   }
   throw new Error("PostgreSQL not available after retries");
 }
-
+//Основная функция реиндексации
 async function reindexAll() {
   await waitForElasticsearch();
   await waitForPostgres();

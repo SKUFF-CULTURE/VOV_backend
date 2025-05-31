@@ -4,7 +4,7 @@ const redis = new Redis({
   port: parseInt(process.env.REDIS_PORT, 10) || 6379,
   password: process.env.REDIS_PASSWORD, // Пароль из переменной окружения
 });
-
+//кэширование данных
 async function getCached(key, fetchFn, ttl = 300) {
   try {
     const cached = await redis.get(key);

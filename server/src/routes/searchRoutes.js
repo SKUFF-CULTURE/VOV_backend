@@ -2,6 +2,7 @@ const express = require("express");
 const es = require("../utils/esClient");
 const router = express.Router();
 
+//Поиск по названию, автору, альбому
 router.get("/", async (req, res, next) => {
   try {
     const { q, from = 0, size = 10, sort } = req.query;

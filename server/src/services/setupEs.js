@@ -1,5 +1,6 @@
 const es = require("../utils/esClient");
 
+//startup конфигурация elastic, индекс "tracks", индексируем только название, автора и альбом
 async function ensureIndex() {
   const exists = await es.indices.exists({ index: "tracks" });
   console.log("Elasticsearch: индекс tracks существует:", exists);

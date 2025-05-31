@@ -11,16 +11,13 @@ const upload = multer({
   limits: { fileSize: 70 * 1024 * 1024 },
 });
 
-/**
- * POST /restoration/upload
- * body (multipart/form-data):
- *  - file: аудиофайл
- *  - userId: строковый идентификатор пользователя
- */
+// Загрузка треков
 router.post("/upload", upload.single("file"), ctrl.uploadAudio);
+// Загрузка метаданных
 router.post("/metadata", express.json(), ctrl.uploadMetadata);
 // Стриминг (для плеера)
 router.get("/stream/:trackId", ctrl.streamTrack);
+// Пинги для проверки кафка брокера
 router.post("/ping", async (req, res) => {
   try {
     const clientIp = req.ip || "unknown";
@@ -41,9 +38,10 @@ router.post("/ping", async (req, res) => {
     return res.status(500).json({ error: "Ошибка отправки ping" });
   }
 });
-// Скачивание (attachment)
+// Скачивание
 router.get("/download/:trackId", ctrl.downloadTrack);
-
+// Проверка на готовность от кафки
 router.get("/isReady", ctrl.isReady);
+// Получение караоке текста для треков
 router.post("/lyrics", express.json(), ctrl.getTrackLyrics);
 module.exports = router;

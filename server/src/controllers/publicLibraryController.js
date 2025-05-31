@@ -251,6 +251,7 @@ exports.deletePublicTrack = async (req, res) => {
   }
 };
 
+//Сортировка через бд и кэш запроса в redis
 exports.getTracksByTags = async (req, res) => {
   let { tags } = req.body;
   // Если tags не передан, ищем все треки

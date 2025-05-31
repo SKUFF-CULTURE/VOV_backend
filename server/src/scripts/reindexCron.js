@@ -4,6 +4,7 @@ const cron = require("node-cron");
 
 console.log("Starting reindex cron job...");
 
+//Использование функции reindex.js с помощью планировщика задач cron
 cron.schedule("*/30 * * * * *", async () => {
   // Каждые 5 минут
   console.log("Running scheduled reindex...");

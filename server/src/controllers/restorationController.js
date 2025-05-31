@@ -68,7 +68,13 @@ exports.uploadAudio = async (req, res) => {
     const nfsFilePath = path.join(NFS_PATH, userId, id, `${file.originalname}`);
 
     // Создаём папку в NFS
-    console.log(`📁 [uploadAudio] Создание папки в NFS: ${path.join(NFS_PATH, userId, id)}`);
+    console.log(
+      `📁 [uploadAudio] Создание папки в NFS: ${path.join(
+        NFS_PATH,
+        userId,
+        id
+      )}`
+    );
     await fs.mkdir(path.join(NFS_PATH, userId, id), { recursive: true });
 
     // Сохраняем файл в NFS
@@ -81,7 +87,9 @@ exports.uploadAudio = async (req, res) => {
     await putObjectAsync(BUCKET, objectName, file.buffer, {
       "Content-Type": file.mimetype,
     });
-    console.log(`✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`);
+    console.log(
+      `✅ [uploadAudio] Файл успешно загружен в MinIO: ${objectName}`
+    );
 
     const minioFilePath = `${BUCKET}/${objectName}`;
     const insert = `
@@ -91,10 +99,16 @@ exports.uploadAudio = async (req, res) => {
     `;
 
     // Сохранение в PostgreSQL
-    console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", { id, userId, filePath: minioFilePath });
+    console.log("📝 [uploadAudio] Попытка записи в PostgreSQL:", {
+      id,
+      userId,
+      filePath: minioFilePath,
+    });
     const result = await db.query(insert, [id, userId, minioFilePath]);
     const trackId = result.rows[0].id;
-    console.log(`✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${trackId}`);
+    console.log(
+      `✅ [uploadAudio] Запись добавлена в PostgreSQL: id=${trackId}`
+    );
 
     // Отправка сообщения в Kafka с UUID трека как ключом
     const message = {
@@ -114,12 +128,17 @@ exports.uploadAudio = async (req, res) => {
       topic: "app.main.audio_raw",
       messages: [{ key: trackId, value: JSON.stringify(message) }], // Используем trackId как ключ
     });
-    console.log(`🚀 [uploadAudio] Сообщение отправлено в Kafka: key=${trackId}`, message);
+    console.log(
+      `🚀 [uploadAudio] Сообщение отправлено в Kafka: key=${trackId}`,
+      message
+    );
 
     return res.status(200).json({ id: trackId, filePath: minioFilePath });
   } catch (e) {
     console.error("❌ [uploadAudio] Общая ошибка:", e);
-    return res.status(500).json({ error: "Ошибка загрузки файла", details: e.message });
+    return res
+      .status(500)
+      .json({ error: "Ошибка загрузки файла", details: e.message });
   }
 };
 // === 2. Сохранение метаданных ===
@@ -207,16 +226,38 @@ async function resolveObject(trackId, version) {
   return file_path_original;
 }
 
-// === 1) Streaming with Range support ===
+// === Стриминг ===
 exports.streamTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
-    const version = req.query.version;
+    const version = req.query.version || "original";
     console.log(
       `📡 [streamTrack] Запрос стриминга: trackId=${trackId}, version=${version}`
     );
 
-    const path = await resolveObject(trackId, version);
+    // Получаем путь к файлу из базы данных
+    const result = await db.query(
+      `SELECT file_path_original, file_path_processed 
+       FROM public.restorations 
+       WHERE id = $1`,
+      [trackId]
+    );
+
+    if (result.rows.length === 0) {
+      console.warn(`⚠️ [streamTrack] Трек не найден: trackId=${trackId}`);
+      res.status(404).json({ error: "Трек не найден" });
+      return;
+    }
+    //Выбор между обработанным и оригиналом
+    const { file_path_original, file_path_processed } = result.rows[0];
+    let path;
+
+    if (version === "processed" && file_path_processed) {
+      path = file_path_processed;
+    } else {
+      path = file_path_original;
+    }
+
     const [bucket, ...parts] = path.split("/");
     const objectName = parts.join("/");
 
@@ -233,7 +274,7 @@ exports.streamTrack = async (req, res) => {
     let start = 0,
       end = total - 1,
       statusCode = 200;
-
+    //разбиение на октеты, для парциального стриминга
     if (range) {
       const matches = /bytes=(\d+)-(\d*)/.exec(range);
       if (matches) {
@@ -285,7 +326,7 @@ exports.streamTrack = async (req, res) => {
   }
 };
 
-// === 2) Download (attachment) ===
+// === Скачивание трека ===
 exports.downloadTrack = async (req, res) => {
   try {
     const { trackId } = req.params;
@@ -316,7 +357,7 @@ exports.downloadTrack = async (req, res) => {
       .json({ error: err.message || "Внутренняя ошибка" });
   }
 };
-
+// Получение транскрипции трека из бд
 exports.getTrackLyrics = async (req, res) => {
   const { trackId } = req.body;
   if (!trackId) {
@@ -358,46 +399,45 @@ exports.getTrackLyrics = async (req, res) => {
     return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
-
-exports.isReady = (req, res) => {
+//Если обработка завершена, путь до processed != NULL -> обработка завершена, отправляем
+//оповещение на фронт, в противном случае - "still processing"
+exports.isReady = async (req, res) => {
   const { trackId } = req.query;
   console.log(`📡 [isReady] Проверка статуса: trackId=${trackId}`);
+
   if (!trackId) {
     console.warn("⚠️ [isReady] Отсутствует trackId");
     return res.status(400).json({ error: "trackId обязателен" });
   }
-  return res.sendStatus(200);
+
+  try {
+    const result = await db.query(
+      "SELECT file_path_processed FROM public.restorations WHERE id = $1",
+      [trackId]
+    );
+
+    if (result.rowCount === 0) {
+      console.warn(`⚠️ [isReady] Трек не найден: trackId=${trackId}`);
+      return res.status(404).json({ error: "Трек не найден" });
+    }
+
+    const filePathProcessed = result.rows[0].file_path_processed;
+    console.log(
+      `ℹ️ [isReady] Путь к реставрированному файлу: ${
+        filePathProcessed || "отсутствует"
+      }`
+    );
+
+    if (!filePathProcessed) {
+      return res.status(200).json({ status: "still processing" });
+    } else {
+      return res.status(200).json({ status: "finalized" });
+    }
+  } catch (err) {
+    console.error(
+      `❌ [isReady] Ошибка проверки статуса trackId=${trackId}:`,
+      err
+    );
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+  }
 };
-// exports.isReady = async (req, res) => {
-//   const { trackId } = req.query;
-//   console.log(`📡 [isReady] Проверка статуса: trackId=${trackId}`);
-  
-//   if (!trackId) {
-//     console.warn("⚠️ [isReady] Отсутствует trackId");
-//     return res.status(400).json({ error: "trackId обязателен" });
-//   }
-
-//   try {
-//     const result = await db.query(
-//       "SELECT file_path_processed FROM public.restorations WHERE id = $1",
-//       [trackId]
-//     );
-
-//     if (result.rowCount === 0) {
-//       console.warn(`⚠️ [isReady] Трек не найден: trackId=${trackId}`);
-//       return res.status(404).json({ error: "Трек не найден" });
-//     }
-
-//     const filePathProcessed = result.rows[0].file_path_processed;
-//     console.log(`ℹ️ [isReady] Путь к реставрированному файлу: ${filePathProcessed || 'отсутствует'}`);
-
-//     if (!filePathProcessed) {
-//       return res.status(200).json({ status: "still processing" });
-//     } else {
-//       return res.status(200).json({ status: "finalized" });
-//     }
-//   } catch (err) {
-//     console.error(`❌ [isReady] Ошибка проверки статуса trackId=${trackId}:`, err);
-//     return res.status(500).json({ error: "Внутренняя ошибка сервера" });
-//   }
-// };

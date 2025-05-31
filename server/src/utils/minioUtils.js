@@ -7,7 +7,7 @@ const minioClient = new Minio.Client({
   accessKey: process.env.MINIO_ACCESS_KEY,
   secretKey: process.env.MINIO_SECRET_KEY,
 });
-
+//положить в бакет минио
 function putObjectAsync(bucket, objectName, buffer, metaData) {
   return new Promise((resolve, reject) => {
     minioClient.putObject(bucket, objectName, buffer, metaData, (err, etag) => {
